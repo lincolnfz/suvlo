@@ -1,0 +1,15 @@
+<skins>
+  <imghorzex name="mainbghead" src="1" left="3"/>
+  <imgframe name="mainbgbody" src="2" top="8" left="7" mode="mask" crbg="FBFCFD"/>
+  <imghorzex name="mainbgfoot" src="3" left="2"/>
+  <png name="closebtn" src="44" subwidth="43"/>
+  <png name="maxbtn" src="46" subwidth="30"/>
+  <png name="minbtn" src="47" subwidth="32"/>
+  <png name="restorebtn" src="48" subwidth="30"/>
+  <png name="welcomeimg" src="48" subwidth="30"/>
+  <imglst name="welcomeimg" src="2" />
+  <imglst name="slideritem" src="7" mode="mask" maskcolor="FF00FF" />
+  <imghorzex name="procback" src="5" left="0"/>
+  <imghorzex name="procfront" src="6" left="0"/>
+  <png name="playbtn" src="49" subwidth="0"/>
+</skins>

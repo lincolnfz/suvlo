@@ -1,0 +1,6 @@
+#pragma once
+
+//#include <bkwin/bkres.h>
+#include "bkuilib/bkwin/bkres.h"
+///////////////////////////////////////////////////////////
+

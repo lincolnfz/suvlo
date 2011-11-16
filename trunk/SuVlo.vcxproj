@@ -1,0 +1,164 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4B38509A-8910-4BE3-B637-06F1C9710A92}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>SuVlo</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="lincomm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="lincomm.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+    <None Include="res.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bkres.h" />
+    <ClInclude Include="bkuilib\bkwin\bkatldefine.h" />
+    <ClInclude Include="bkuilib\bkwin\bkbmppool.h" />
+    <ClInclude Include="bkuilib\bkwin\bkcolor.h" />
+    <ClInclude Include="bkuilib\bkwin\bkdlgview.h" />
+    <ClInclude Include="bkuilib\bkwin\bkfontpool.h" />
+    <ClInclude Include="bkuilib\bkwin\bkimage.h" />
+    <ClInclude Include="bkuilib\bkwin\bklistbox.h" />
+    <ClInclude Include="bkuilib\bkwin\bklistview.h" />
+    <ClInclude Include="bkuilib\bkwin\bkobject.h" />
+    <ClInclude Include="bkuilib\bkwin\bkpngpool.h" />
+    <ClInclude Include="bkuilib\bkwin\bkres.h" />
+    <ClInclude Include="bkuilib\bkwin\bkresutil.h" />
+    <ClInclude Include="bkuilib\bkwin\bkskin.h" />
+    <ClInclude Include="bkuilib\bkwin\bkstringpool.h" />
+    <ClInclude Include="bkuilib\bkwin\bktheme.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwnd.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndcmnctrl.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwnddlg.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwnddlgfile.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndnotify.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndpanel.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndrichtxt.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndstyle.h" />
+    <ClInclude Include="bkuilib\bkwin\bkwndtabctrl.h" />
+    <ClInclude Include="bkuilib\bkwin\listboxbase.h" />
+    <ClInclude Include="bkuilib\wtlhelper\bkfolderbrowsectrl.h" />
+    <ClInclude Include="bkuilib\wtlhelper\iidl.h" />
+    <ClInclude Include="bkuilib\wtlhelper\wh3statecheckimglst.h" />
+    <ClInclude Include="bkuilib\wtlhelper\whthreadnotify.h" />
+    <ClInclude Include="bkuilib\wtlhelper\whwindow.h" />
+    <ClInclude Include="include\libmms\mms.h" />
+    <ClInclude Include="include\libmms\mmsh.h" />
+    <ClInclude Include="include\libmms\mmsio.h" />
+    <ClInclude Include="include\libmms\mmsx.h" />
+    <ClInclude Include="include\libmms\mms_config.h" />
+    <ClInclude Include="MainDlg.h" />
+    <ClInclude Include="MultiControl.h" />
+    <ClInclude Include="PlayWnd.h" />
+    <ClInclude Include="res.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="resource1.h" />
+    <ClInclude Include="resource2.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SuVlo.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="WrapFFMpeg.h" />
+    <ClInclude Include="Wrapmms.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MainDlg.cpp" />
+    <ClCompile Include="MultiControl.cpp" />
+    <ClCompile Include="PlayWnd.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="SuVlo.cpp" />
+    <ClCompile Include="tinyxml\tinystr.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxml.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxmlerror.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxmlparser.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="SuVlo.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

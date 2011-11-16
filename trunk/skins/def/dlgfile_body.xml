@@ -1,0 +1,12 @@
+<dlg pos="0,0,-0,-0">
+    <!--<img skin="welcomeimg" sub="-1" pos="0 , 0" float="1" align="center" valign="middle"></img>-->
+   <realwnd id="5010" pos="0,0,-0,-43" ctrlid="5010" crbg="55FF00"/>
+  <dlg id="5003"  pos="0,-43,-0,-32" crbg="000000">
+    <slider id="6116" bgskin="procback" posskin="procfront" itemskin="slideritem" min="0" max="100" value="0" pos="0,0,-0,-0" ></slider>
+   </dlg>
+  <dlg id="5002"  pos="0,-32,-0,-0" crbg="000000">
+    <!--<progress bgskin="mainbghead" posskin="mainbgfoot" min="0" max="100" value="30" pos="0 , 0,-0, -0"></progress>-->
+    <imgbtn id="6113" class="normalbtn" skin="playbtn" pos="300,3"/>
+    <slider id="6117" bgskin="procback" posskin="procfront" itemskin="slideritem" min="0" max="100" value="100" pos="-100,9,-30,-5" ></slider>-->
+  </dlg>
+</dlg>

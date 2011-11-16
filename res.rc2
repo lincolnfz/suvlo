@@ -1,0 +1,29 @@
+#pragma once
+
+//xml
+DEFINE_XML(IDR_BK_DLGFILE_HEADER,				 	    506, 					"skins\\def\\dlgfile_header.xml")
+DEFINE_XML(IDR_BK_DLGFILE_BODY,					 	    507, 					"skins\\def\\dlgfile_body.xml")
+DEFINE_XML(IDR_BK_DLGFILE_FOOT,					 	    508, 					"skins\\def\\dlgfile_foot.xml")
+
+DEFINE_XML(IDR_BK_MAIN_DIALOG,							505, 					"skins\\def\\dlg_main_layout.xml")
+DEFINE_XML(IDR_BK_SKIN_DEF,								100, 					"skins\\def\\skin.xml")
+DEFINE_XML(IDR_BK_STYLE_DEF,							101, 					"skins\\def\\style.xml")
+DEFINE_XML(IDR_BK_STRING_DEF,							102, 					"skins\\def\\string.xml")
+
+//bitmap
+DEFINE_BMP(IDB_MAIN_BG_HEADER,              			1,   					"skins\\def\\main_bg_header.bmp")
+DEFINE_BMP(IDB_MAIN_BG_BODY,                			2,   					"skins\\def\\main_bg_body.bmp")
+DEFINE_BMP(IDB_MAIN_BG_FOOTER,              			3,   					"skins\\def\\main_bg_footer.bmp")
+DEFINE_BMP(IDB_MAIN_BG_WELCOME,              			4,   					"skins\\def\\welcome.bmp")
+DEFINE_BMP(IDB_MAIN_BG_BACK,              			    5,   					"skins\\def\\back.bmp")
+DEFINE_BMP(IDB_MAIN_BG_FRONT,              			    6,   					"skins\\def\\front.bmp")
+DEFINE_BMP(IDB_MAIN_BG_SILDER,              			7,   					"skins\\def\\slider.bmp")
+
+//png
+DEFINE_PNG(IDB_BTN_SYS_CLOSE_PNG,						44,						 "skins\\def\\btn_sys_close.png")
+DEFINE_PNG(IDB_BTN_SYS_MAXIMIZE_PNG,					46,						 "skins\\def\\btn_sys_maximize.png")
+DEFINE_PNG(IDB_BTN_SYS_MINIMIZE_PNG,					47,						 "skins\\def\\btn_sys_minimize.png")
+DEFINE_PNG(IDB_BTN_SYS_RESTORE_PNG,						48,						 "skins\\def\\btn_sys_restore.png")
+DEFINE_PNG(IDB_BTN_SYS_PLAY_PNG,						49,						 "skins\\def\\play.png")
+
+

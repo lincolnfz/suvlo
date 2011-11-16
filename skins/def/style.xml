@@ -1,0 +1,9 @@
+<style>
+  <class name="mainhead" skin="mainbghead" font="0000" crtext="000000" crbg="FBFCFD"/>
+  <class name="mainbody" skin="mainbgbody" font="0000" crtext="FFFFFF" crbg="FBFCFD" x-margin="1"/>
+  <class name="mainfoot" skin="mainbgfoot" font="0000" crtext="000000" crbg="FBFCFD" x-margin="10" y-margin="1"/>
+  <class name="plywelcome" skin="welcomeimg" font="0000" crtext="000000" crbg="FBFCFD"/>
+  <class name="linkimage" cursor="hand"/>
+  <class name="vcentertext" textmode="24"/>
+  <class name="normalbtn" font="0000" crtext="000000" textmode="25" x-margin="5"/>
+</style>

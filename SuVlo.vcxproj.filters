@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="tinyxml">
+      <UniqueIdentifier>{98cad27d-cf93-4453-aa9f-74f9830ee5d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="bkwin">
+      <UniqueIdentifier>{65c95174-7bdf-46b7-ba43-9422c67b29ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="bkwin\help">
+      <UniqueIdentifier>{5163926a-2ead-4ff8-aff9-2365fb0ebef8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libmms">
+      <UniqueIdentifier>{79ffa9c6-d585-4f36-b821-3bf0317ad7a7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+    <None Include="res.rc2">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SuVlo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MainDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="res.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="resource1.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="resource2.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bkres.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkatldefine.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkbmppool.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkcolor.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkdlgview.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkfontpool.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkimage.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bklistbox.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bklistview.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkobject.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkpngpool.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkres.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkresutil.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkskin.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkstringpool.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bktheme.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwnd.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndcmnctrl.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwnddlg.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwnddlgfile.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndnotify.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndpanel.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndrichtxt.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndstyle.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\bkwndtabctrl.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\bkwin\listboxbase.h">
+      <Filter>bkwin</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\wtlhelper\bkfolderbrowsectrl.h">
+      <Filter>bkwin\help</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\wtlhelper\iidl.h">
+      <Filter>bkwin\help</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\wtlhelper\wh3statecheckimglst.h">
+      <Filter>bkwin\help</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\wtlhelper\whthreadnotify.h">
+      <Filter>bkwin\help</Filter>
+    </ClInclude>
+    <ClInclude Include="bkuilib\wtlhelper\whwindow.h">
+      <Filter>bkwin\help</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayWnd.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libmms\mms.h">
+      <Filter>libmms</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libmms\mms_config.h">
+      <Filter>libmms</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libmms\mmsh.h">
+      <Filter>libmms</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libmms\mmsio.h">
+      <Filter>libmms</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libmms\mmsx.h">
+      <Filter>libmms</Filter>
+    </ClInclude>
+    <ClInclude Include="WrapFFMpeg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiControl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Wrapmms.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SuVlo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxmlparser.cpp">
+      <Filter>tinyxml</Filter>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinystr.cpp">
+      <Filter>tinyxml</Filter>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxml.cpp">
+      <Filter>tinyxml</Filter>
+    </ClCompile>
+    <ClCompile Include="tinyxml\tinyxmlerror.cpp">
+      <Filter>tinyxml</Filter>
+    </ClCompile>
+    <ClCompile Include="MainDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayWnd.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MultiControl.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="SuVlo.rc">
+      <Filter>头文件</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

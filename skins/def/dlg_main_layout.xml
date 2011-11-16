@@ -1,0 +1,15 @@
+﻿<layer title="feplayer" width="600" height="450" appwin="1" resize="1">
+	<header class="mainhead" width="full" height="23">
+		<dlgfile pos="0,0,-0,-0" src="506" />
+	</header>
+  <body class="mainbody" width="full" height="full">
+    <dlgfile pos="0,0,-0,-0" src="507" />
+
+    <!--<img pos="-170,11" skin="logo" class="linkimage" href="http://www.ijinshan.com/?fr=client"/>
+    <img pos="503,8" skin="tipdbleng" transparent="1" show="1"/>
+    -->
+  </body>
+	<footer class="mainfoot" width="full" height="23">
+		<dlgfile pos="0,0,-0,-0" src="508" />
+	</footer>
+</layer>

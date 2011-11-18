@@ -27,6 +27,7 @@ unsigned int __stdcall run( void* parm )
 CMainDlg::CMainDlg(void):CBkDialogImpl<CMainDlg>(IDR_BK_MAIN_DIALOG)
 {
 	m_hdll_source = NULL;
+	m_pGraphBuilder = NULL;
 	pMainDlg = this;
 	BkString::Load(IDR_BK_STRING_DEF); // 加载字符串
 	BkFontPool::SetDefaultFont(0, -12); // 设置字体
@@ -171,6 +172,8 @@ BOOL CMainDlg::Init()
 	}
 	p_dllgetclassObject = (DLLGETCLASSOBJECT)GetProcAddress( m_hdll_source , "DllGetClassObject" );
 	IClassFactory* pFactouy = NULL;
+	
+	//得到类工厂
 	p_dllgetclassObject( CLSID_NetMediaSource , IID_IClassFactory , (void**)&pFactouy );
 	IBaseFilter* pBaseFilter = NULL;
 	HRESULT hr = pFactouy->CreateInstance( NULL , IID_IBaseFilter , (void**)&pBaseFilter );
@@ -186,6 +189,7 @@ BOOL CMainDlg::Init()
 	}
 
 	pBaseFilter->Release();
+	
 	
 	return TRUE;
 }

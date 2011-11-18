@@ -298,7 +298,7 @@ CWrapFFMpeg::CWrapFFMpeg(void)
 CWrapFFMpeg::~CWrapFFMpeg(void)
 {
 	free( pMemBuf );	
-	av_freep( m_pVideoState );
+	clean();
 	CloseHandle( m_hScrapMemEvent );
 	CloseHandle( m_hFillMemEvent );
 	CloseHandle( m_hOpMemLock );

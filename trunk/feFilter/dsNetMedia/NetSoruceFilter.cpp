@@ -131,8 +131,8 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 {
 	m_pVideoPin = new CVideoStreamPin( phr , this );
 	m_pAudioPin = new CAudioStreamPin( phr , this );
-	m_pVideoPin->AddRef();
-	m_pAudioPin->AddRef();
+	//m_pVideoPin->AddRef();
+	//m_pAudioPin->AddRef();
 	if (phr)
 	{
 		if ( m_pVideoPin == NULL || m_pAudioPin == NULL )
@@ -146,8 +146,8 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 
 CNetSourceFilter::~CNetSourceFilter(void)
 {
-	delete m_pVideoPin;
-	delete m_pAudioPin;
+	//delete m_pVideoPin; 
+	//delete m_pAudioPin;
 	/*if( m_pVideoPin )
 	{
 		m_pVideoPin->Release();

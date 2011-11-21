@@ -1,11 +1,18 @@
 #include "StdAfx.h"
 #include "NetSoruceFilter.h"
+#include "common.h"
 
-#define  DEFAULT_WIDTH 1982
+//滤波器名称
+WCHAR filterNam[][20]={
+	L"dsNetMedia",
+	L"ViderRender"
+};
+
+#define  DEFAULT_WIDTH 1920
 #define DEFAULT_HEIGHT 1080
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
-	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Out")
+	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out")
 {
 
 	
@@ -19,6 +26,9 @@ CVideoStreamPin::~CVideoStreamPin()
 //填充样本
 HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 {
+	//CWrapFFMpeg* pWrapFFmpeg = m_wrapmms
+	CAutoLock cAutoLock( &m_cSharedState );
+	CheckPointer(pSamp, E_POINTER);
 	return S_OK;
 }
 
@@ -64,14 +74,15 @@ HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 
 	VIDEOINFOHEADER   vih; 
 	memset(   &vih,   0,   sizeof(   vih   )   ); 
-	vih.bmiHeader.biCompression   =   MAKEFOURCC( 'Y ', 'U ', 'Y ', 'V '); 
-	vih.bmiHeader.biBitCount         =   16; 
-	vih.bmiHeader.biSize                   =   sizeof(BITMAPINFOHEADER); 
+	vih.bmiHeader.biCompression   =   MAKEFOURCC( 'I', '4', '2', '0'); 
+	vih.bmiHeader.biBitCount         =   16; //每个像素的位数
+	vih.bmiHeader.biSize                   =   sizeof(BITMAPINFOHEADER);  //bitmapinfoheader结构体的长度
 	vih.bmiHeader.biWidth                 =   DEFAULT_WIDTH;//Your   size.x 
 	vih.bmiHeader.biHeight               =   DEFAULT_HEIGHT;//Your   size.y 
-	vih.bmiHeader.biPlanes               =   1; 
-	vih.bmiHeader.biSizeImage         =   GetBitmapSize(&vih.bmiHeader); 
-	vih.bmiHeader.biClrImportant   =   0; 
+	vih.bmiHeader.biPlanes               =   1;		//填为1
+	vih.bmiHeader.biSizeImage         =   GetBitmapSize(&vih.bmiHeader); //实际的图像数据占用的字节数
+	vih.bmiHeader.biClrUsed = 0; //调色板中实际使用的颜色数,这个值通常为0，表示使用biBitCount确定的全部颜色
+	vih.bmiHeader.biClrImportant   =   0; //指定本图象中重要的颜色数，如果该值为零，则认为所有的颜色都是重要的。
 
 	pMediaType-> SetType(&MEDIATYPE_Video); //Major Types
 	pMediaType-> SetSubtype(&MEDIASUBTYPE_YUY2); //sub type
@@ -85,7 +96,7 @@ HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 
 //音频接口
 CAudioStreamPin::CAudioStreamPin(HRESULT *phr, CSource *pFilter)
-	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Out")
+	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Audio_Out")
 {
 	
 }
@@ -99,7 +110,7 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 {
 	BYTE *pData;
 	long cbData;
-
+	CAutoLock cAutoLock( &m_cSharedState );
 	CheckPointer(pSamp, E_POINTER);
 	pSamp->GetPointer(&pData);
 	cbData = pSamp->GetSize();
@@ -179,8 +190,34 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
 	char *lpurl = new char[size];
 	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
-	m_wrapmmsg.play( lpurl );
+	//m_wrapmms.play( lpurl );
 	delete []lpurl;
+	IGraphBuilder *pGraphBuilder = NULL;
+	IFilterGraph *pFilterGraph = GetFilterGraph();
+	if ( pFilterGraph )
+	{
+		if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IGraphBuilder , (void **)&pGraphBuilder ) ) )
+		{
+			//pGraphBuilder->Render( m_pVideoPin );
+			IBaseFilter* pBaseFilter = NULL;
+			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pBaseFilter ) ) )
+			{			
+				pBaseFilter->Release();
+			}
+			/*IOverlay *pIOverlay = NULL;
+			if ( SUCCEEDED( pBaseFilter->QueryInterface( IID_IOverlay , (void**)&pIOverlay ) ) )
+			{
+				pBaseFilter->f
+				pGraphBuilder->Connect( m_pVideoPin , pIOverlay );
+			}*/
+			
+			
+
+			pGraphBuilder->Release();
+		}
+	}
+	
+	
 	return S_OK;
 }
 

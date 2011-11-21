@@ -16,6 +16,7 @@ public:
 
 	void play( const char* lpUrl );
 	void nothing();
+	CWrapFFMpeg* getWrapFFmpeg(){ return &m_ffmpeg; }
 	static unsigned CALLBACK recvdata( void *arge );
 
 protected:

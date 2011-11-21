@@ -22,6 +22,9 @@ protected:
 
 	virtual HRESULT GetMediaType(__inout CMediaType *pMediaType);
 
+protected:
+	CCritSec m_cSharedState;            // Protects our internal state
+
 };
 
 class CAudioStreamPin : public CSourceStream
@@ -36,6 +39,9 @@ protected:
 	virtual HRESULT DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOCATOR_PROPERTIES * ppropInputRequest); //pure
 
 	virtual HRESULT GetMediaType(__inout CMediaType *pMediaType);
+
+protected:
+	CCritSec m_cSharedState;            // Protects our internal state
 
 };
 
@@ -55,7 +61,7 @@ public:
 
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
-	CWrapmms m_wrapmmsg;
+	CWrapmms m_wrapmms;
 	VideoState* m_pVideoState;
 	HANDLE m_hAlive_pack_event;
 };

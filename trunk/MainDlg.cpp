@@ -2,6 +2,10 @@
 #include "MainDlg.h"
 #include <bkwin/bkcolor.h>
 
+WCHAR filterNam[][20]={
+	L"dsNetMedia",
+	L"ViderRender"
+};
 
 CMainDlg* pMainDlg = NULL;
 extern CString strAppPath;
@@ -9,11 +13,6 @@ extern CString strAppPath;
 typedef HRESULT ( __stdcall *DLLGETCLASSOBJECT )( const IID& rClsID , const IID& riid , void** pv );
 
 DLLGETCLASSOBJECT p_dllgetclassObject;
-
-//ÂË²¨Æ÷Ãû³Æ
-WCHAR filterNam[][20]={
-	L"dsNetMedia"
-};
 
 
 unsigned int __stdcall run( void* parm )
@@ -187,8 +186,14 @@ BOOL CMainDlg::Init()
 	{
 		return FALSE;
 	}
-
 	pBaseFilter->Release();
+
+	IBaseFilter *pVideoRenderFilter = NULL;
+	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
+	{
+		m_pGraphBuilder->AddFilter( pVideoRenderFilter , filterNam[1] );
+		pVideoRenderFilter->Release();	
+	}
 	
 	
 	return TRUE;

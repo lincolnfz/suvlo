@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "NetSoruceFilter.h"
 #include "common.h"
+#include "filterUtil.h"
 
 //ÂË²¨Æ÷Ãû³Æ
 WCHAR filterNam[][20]={
@@ -194,16 +195,27 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 	delete []lpurl;
 	IGraphBuilder *pGraphBuilder = NULL;
 	IFilterGraph *pFilterGraph = GetFilterGraph();
+	HRESULT hr = S_OK;
 	if ( pFilterGraph )
 	{
 		if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IGraphBuilder , (void **)&pGraphBuilder ) ) )
 		{
 			//pGraphBuilder->Render( m_pVideoPin );
-			IBaseFilter* pBaseFilter = NULL;
-			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pBaseFilter ) ) )
-			{			
-				pBaseFilter->Release();
+			IBaseFilter* pVideoReaderFilter = NULL;
+			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pVideoReaderFilter ) ) )
+			{
+				IPin* pIPin = NULL;
+				if ( SUCCEEDED(GetUnconnectedPin( pVideoReaderFilter , PINDIR_INPUT , &pIPin )) )
+				{
+					hr = pGraphBuilder->Connect( m_pVideoPin , pIPin );
+				}
+				if ( SUCCEEDED(hr) )
+				{
+					hr = this->Run( 0 );
+				}
+				pVideoReaderFilter->Release();
 			}
+			
 			/*IOverlay *pIOverlay = NULL;
 			if ( SUCCEEDED( pBaseFilter->QueryInterface( IID_IOverlay , (void**)&pIOverlay ) ) )
 			{

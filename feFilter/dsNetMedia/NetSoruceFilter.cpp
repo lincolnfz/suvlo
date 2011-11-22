@@ -2,6 +2,7 @@
 #include "NetSoruceFilter.h"
 #include "common.h"
 #include "filterUtil.h"
+#include <wmsdkidl.h>
 
 //滤波器名称
 WCHAR filterNam[][20]={
@@ -9,8 +10,8 @@ WCHAR filterNam[][20]={
 	L"ViderRender"
 };
 
-#define  DEFAULT_WIDTH 1920
-#define DEFAULT_HEIGHT 1080
+#define  DEFAULT_WIDTH 720
+#define DEFAULT_HEIGHT 480
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out")
@@ -75,8 +76,8 @@ HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 
 	VIDEOINFOHEADER   vih; 
 	memset(   &vih,   0,   sizeof(   vih   )   ); 
-	vih.bmiHeader.biCompression   =   MAKEFOURCC( 'I', '4', '2', '0'); 
-	vih.bmiHeader.biBitCount         =   16; //每个像素的位数
+	vih.bmiHeader.biCompression   =   MAKEFOURCC( 'R', 'Y', '2', '4'); 
+	vih.bmiHeader.biBitCount         =   24; //每个像素的位数
 	vih.bmiHeader.biSize                   =   sizeof(BITMAPINFOHEADER);  //bitmapinfoheader结构体的长度
 	vih.bmiHeader.biWidth                 =   DEFAULT_WIDTH;//Your   size.x 
 	vih.bmiHeader.biHeight               =   DEFAULT_HEIGHT;//Your   size.y 
@@ -86,9 +87,9 @@ HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	vih.bmiHeader.biClrImportant   =   0; //指定本图象中重要的颜色数，如果该值为零，则认为所有的颜色都是重要的。
 
 	pMediaType-> SetType(&MEDIATYPE_Video); //Major Types
-	pMediaType-> SetSubtype(&MEDIASUBTYPE_YUY2); //sub type
+	pMediaType-> SetSubtype(&MEDIASUBTYPE_RGB24); //sub type
 	pMediaType-> SetFormatType(&FORMAT_VideoInfo);  //formattype
-	pMediaType-> SetFormat(   (BYTE*)   &vih,   sizeof(   vih   )   ); 
+	pMediaType-> SetFormat( (BYTE*)&vih, sizeof( vih ) ); 
 	pMediaType-> SetSampleSize(vih.bmiHeader.biSizeImage);
 
 
@@ -208,21 +209,24 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 				if ( SUCCEEDED(GetUnconnectedPin( pVideoReaderFilter , PINDIR_INPUT , &pIPin )) )
 				{
 					hr = pGraphBuilder->Connect( m_pVideoPin , pIPin );
+					if ( VFW_E_CANNOT_CONNECT == hr )
+					{
+						int i = 0;
+					}
 				}
 				if ( SUCCEEDED(hr) )
 				{
-					hr = this->Run( 0 );
+					IMediaControl *pMediaControl = NULL;
+					if ( pGraphBuilder->QueryInterface( IID_IMediaControl , (void**)&pMediaControl ) )
+					{
+						pMediaControl->Run();
+						pMediaControl->Release();
+					}
+					
+
 				}
 				pVideoReaderFilter->Release();
 			}
-			
-			/*IOverlay *pIOverlay = NULL;
-			if ( SUCCEEDED( pBaseFilter->QueryInterface( IID_IOverlay , (void**)&pIOverlay ) ) )
-			{
-				pBaseFilter->f
-				pGraphBuilder->Connect( m_pVideoPin , pIOverlay );
-			}*/
-			
 			
 
 			pGraphBuilder->Release();

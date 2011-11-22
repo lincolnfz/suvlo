@@ -211,3 +211,4 @@ BOOL CMainDlg::Clean()
 	}
 	return TRUE;
 }
+

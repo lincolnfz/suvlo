@@ -20,7 +20,9 @@ protected:
 
 	virtual HRESULT DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOCATOR_PROPERTIES * ppropInputRequest); //pure
 
-	virtual HRESULT GetMediaType(__inout CMediaType *pMediaType);
+	virtual HRESULT CheckMediaType(const CMediaType *pMediaType);
+
+	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
 
 protected:
 	CCritSec m_cSharedState;            // Protects our internal state

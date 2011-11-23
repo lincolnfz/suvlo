@@ -29,29 +29,30 @@ CVideoStreamPin::~CVideoStreamPin()
 HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 {
 	//CWrapFFMpeg* pWrapFFmpeg = m_wrapmms
-	CAutoLock cAutoLock( &m_cSharedState );
 	CheckPointer(pSamp, E_POINTER);
+	CAutoLock cAutoLock( &m_cSharedState );
+	
 	return S_OK;
 }
 
 //申明大小
 HRESULT CVideoStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOCATOR_PROPERTIES * ppropInputRequest)
-{
-	HRESULT hr;
-	CAutoLock cAutoLock(m_pFilter->pStateLock());
-
+{	
 	CheckPointer(pAlloc, E_POINTER);
 	CheckPointer(ppropInputRequest, E_POINTER);
+	HRESULT hr;
+	CAutoLock cAutoLock(m_pFilter->pStateLock());
 
 	VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER*) m_mt.Format();
 
 	// Ensure a minimum number of buffers
-	if (ppropInputRequest->cBuffers == 0)
-	{
-		ppropInputRequest->cBuffers = 2;
-	}
+	ppropInputRequest->cBuffers = 1;
 	ppropInputRequest->cbBuffer = pvi->bmiHeader.biSizeImage;
+	ASSERT( ppropInputRequest->cbBuffer );
 
+	// Ask the allocator to reserve us some sample memory. NOTE: the function
+	// can succeed (return NOERROR) but still not have allocated the
+	// memory that we requested, so we must check we got whatever we wanted.
 	ALLOCATOR_PROPERTIES Actual;
 	hr = pAlloc->SetProperties(ppropInputRequest, &Actual);
 	if (FAILED(hr)) 
@@ -65,18 +66,107 @@ HRESULT CVideoStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOC
 		return E_FAIL;
 	}
 
+	// Make sure that we have only 1 buffer (we erase the ball in the
+	// old buffer to save having to zero a 200k+ buffer every time
+	// we draw a frame)
+	ASSERT(Actual.cBuffers == 1);
+
+	return NOERROR;
+}
+
+HRESULT CVideoStreamPin::CheckMediaType(const CMediaType *pMediaType)
+{
+	CheckPointer(pMediaType,E_POINTER);
+
+	if((*(pMediaType->Type()) != MEDIATYPE_Video) ||   // we only output video
+		!(pMediaType->IsFixedSize()))                  // in fixed size samples
+	{                                                  
+		return E_INVALIDARG;
+	}
+
+	// Check for the subtypes we support
+	const GUID *SubType = pMediaType->Subtype();
+	if (SubType == NULL)
+		return E_INVALIDARG;
+
+	if( (*SubType != WMMEDIASUBTYPE_RGB24 )
+		&& (*SubType != WMMEDIASUBTYPE_I420 )
+		)
+	{
+		return E_INVALIDARG;
+	}
+
+	// Get the format area of the media type
+	VIDEOINFO *pvi = (VIDEOINFO *) pMediaType->Format();
+
+	if(pvi == NULL)
+		return E_INVALIDARG;
+
+
 	return S_OK;
 }
 
 //比较是否是允许的mediatype
-HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
+HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaType)
 {
 	CAutoLock cAutoLock(m_pFilter->pStateLock());
 	CheckPointer(pMediaType, E_POINTER);
 
+	if(iPosition < 0)
+		return E_INVALIDARG;
+
+	// Have we run off the end of types?
+	if(iPosition > 1)
+		return VFW_S_NO_MORE_ITEMS;
+
+	VIDEOINFO *pvi = (VIDEOINFO *) pMediaType->AllocFormatBuffer(sizeof(VIDEOINFO));
+	if(NULL == pvi)
+		return(E_OUTOFMEMORY);
+
+	// Initialize the VideoInfo structure before configuring its members
+	ZeroMemory(pvi, sizeof(VIDEOINFO));
+
+	switch ( iPosition )
+	{
+	case 0:
+		{
+			pvi->bmiHeader.biCompression = MAKEFOURCC( 'I', '4', '2', '0');
+			pvi->bmiHeader.biBitCount    = 16;
+		}
+		break;
+	case 1:
+		{
+			pvi->bmiHeader.biCompression = BI_RGB;
+			pvi->bmiHeader.biBitCount    = 24;
+		}		
+		break;
+	}
+	pvi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER); //bitmapinfoheader结构体的长度
+	pvi->bmiHeader.biWidth = DEFAULT_WIDTH;
+	pvi->bmiHeader.biHeight = DEFAULT_HEIGHT;
+	pvi->bmiHeader.biPlanes = 1; //必填1
+	pvi->bmiHeader.biSizeImage = GetBitmapSize( &(pvi->bmiHeader) ); //实际的图像数据占用的字节数
+	pvi->bmiHeader.biClrImportant = 0; //指定本图象中重要的颜色数，如果该值为零，则认为所有的颜色都是重要的。
+	pvi->bmiHeader.biClrUsed = 0; //调色板中实际使用的颜色数,这个值通常为0，表示使用biBitCount确定的全部颜色
+
+	// Work out the GUID for the subtype from the header info.
+	const GUID SubTypeGUID = GetBitmapSubtype(&pvi->bmiHeader);
+
+	SetRectEmpty(&(pvi->rcSource)); // we want the whole image area rendered.
+	SetRectEmpty(&(pvi->rcTarget)); // no particular destination rectangle
+
+	pMediaType->SetType(&MEDIATYPE_Video);
+	pMediaType->SetFormatType(&FORMAT_VideoInfo);
+	pMediaType->SetTemporalCompression(FALSE);
+	pMediaType->SetSubtype( &SubTypeGUID );
+	pMediaType->SetSampleSize( pvi->bmiHeader.biSizeImage );
+
+	return NOERROR;
+
+	/*
 	VIDEOINFOHEADER   vih; 
 	memset(   &vih,   0,   sizeof(   vih   )   ); 
-	vih.bmiHeader.biCompression   =   MAKEFOURCC( 'R', 'Y', '2', '4'); 
+	vih.bmiHeader.biCompression   =   BI_RGB; 
 	vih.bmiHeader.biBitCount         =   24; //每个像素的位数
 	vih.bmiHeader.biSize                   =   sizeof(BITMAPINFOHEADER);  //bitmapinfoheader结构体的长度
 	vih.bmiHeader.biWidth                 =   DEFAULT_WIDTH;//Your   size.x 
@@ -90,10 +180,9 @@ HRESULT CVideoStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	pMediaType-> SetSubtype(&MEDIASUBTYPE_RGB24); //sub type
 	pMediaType-> SetFormatType(&FORMAT_VideoInfo);  //formattype
 	pMediaType-> SetFormat( (BYTE*)&vih, sizeof( vih ) ); 
-	pMediaType-> SetSampleSize(vih.bmiHeader.biSizeImage);
-
-
+	pMediaType-> SetSampleSize(vih.bmiHeader.biSizeImage);	
 	return S_OK;
+	*/
 }
 
 //音频接口
@@ -201,34 +290,28 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 	{
 		if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IGraphBuilder , (void **)&pGraphBuilder ) ) )
 		{
-			//pGraphBuilder->Render( m_pVideoPin );
 			IBaseFilter* pVideoReaderFilter = NULL;
 			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pVideoReaderFilter ) ) )
 			{
 				IPin* pIPin = NULL;
 				if ( SUCCEEDED(GetUnconnectedPin( pVideoReaderFilter , PINDIR_INPUT , &pIPin )) )
 				{
-					hr = pGraphBuilder->Connect( m_pVideoPin , pIPin );
-					if ( VFW_E_CANNOT_CONNECT == hr )
+					hr = m_pVideoPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
+					if ( SUCCEEDED(hr) )
 					{
-						int i = 0;
-					}
-				}
-				if ( SUCCEEDED(hr) )
-				{
-					IMediaControl *pMediaControl = NULL;
-					if ( pGraphBuilder->QueryInterface( IID_IMediaControl , (void**)&pMediaControl ) )
+						//联接成功
+						this->Run(0);
+						this->Stop();
+						m_pVideoPin->Disconnect();
+					}						
+					else if ( VFW_E_CANNOT_CONNECT == hr )
 					{
-						pMediaControl->Run();
-						pMediaControl->Release();
+						//无法找到中间的过渡的pin
 					}
-					
-
 				}
 				pVideoReaderFilter->Release();
 			}
 			
-
 			pGraphBuilder->Release();
 		}
 	}

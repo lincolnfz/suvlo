@@ -9,7 +9,7 @@
 AMOVIESETUP_MEDIATYPE sudMediaTypes[]={
 	{
 		&MEDIATYPE_Video ,  // Major type
-		&FORMAT_VideoInfo  // Minor type
+		&MEDIASUBTYPE_NULL  // Minor type
 	},
 	{
 		&MEDIATYPE_Audio ,  // Major type

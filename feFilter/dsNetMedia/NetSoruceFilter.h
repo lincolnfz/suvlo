@@ -15,6 +15,9 @@ public:
 	CVideoStreamPin(HRESULT *phr, CSource *pFilter);
 	virtual ~CVideoStreamPin();
 
+public:
+	virtual HRESULT SetMediaType(const CMediaType *);
+
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
 

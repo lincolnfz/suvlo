@@ -25,13 +25,29 @@ CVideoStreamPin::~CVideoStreamPin()
 
 }
 
+HRESULT CVideoStreamPin::SetMediaType(const CMediaType * pmt)
+{
+	__super::SetMediaType(pmt);
+
+	return S_OK;
+}
+
 //Ìî³äÑù±¾
 HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 {
 	//CWrapFFMpeg* pWrapFFmpeg = m_wrapmms
 	CheckPointer(pSamp, E_POINTER);
 	CAutoLock cAutoLock( &m_cSharedState );
-	
+	BYTE *pData;
+	long cbData;
+	// Access the sample's data buffer
+	pSamp->GetPointer(&pData);
+	cbData = pSamp->GetSize();
+	// Check that we're still using video
+	ASSERT(m_mt.formattype == FORMAT_VideoInfo);
+
+	VIDEOINFOHEADER *pvih = (VIDEOINFOHEADER*)m_mt.pbFormat;
+
 	return S_OK;
 }
 

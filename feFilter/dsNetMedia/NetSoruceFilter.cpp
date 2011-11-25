@@ -105,9 +105,10 @@ HRESULT CVideoStreamPin::CheckMediaType(const CMediaType *pMediaType)
 	if (SubType == NULL)
 		return E_INVALIDARG;
 
-	if( (*SubType != MEDIASUBTYPE_RGB565 )
-		&& (*SubType != WMMEDIASUBTYPE_RGB24 )
-		&& (*SubType != WMMEDIASUBTYPE_I420 )
+	if( IsEqualGUID(*SubType , WMMEDIASUBTYPE_I420 )
+		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB32 )
+		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB24 ) 
+		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB565 )
 		)
 	{
 		return E_INVALIDARG;
@@ -133,7 +134,7 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 		return E_INVALIDARG;
 
 	// Have we run off the end of types?
-	if(iPosition > 2)
+	if(iPosition > 3)
 		return VFW_S_NO_MORE_ITEMS;
 
 	VIDEOINFO *pvi = (VIDEOINFO *) pMediaType->AllocFormatBuffer(sizeof(VIDEOINFO));
@@ -154,8 +155,8 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 	case 1:
 		{
 			pvi->bmiHeader.biCompression = BI_RGB;
-			pvi->bmiHeader.biBitCount    = 16;
-		}
+			pvi->bmiHeader.biBitCount    = 32;
+		}		
 		break;
 	case 2:
 		{
@@ -163,6 +164,16 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 			pvi->bmiHeader.biBitCount    = 24;
 		}		
 		break;
+	case 3:
+		{
+			pvi->bmiHeader.biCompression = BI_BITFIELDS;
+			pvi->bmiHeader.biBitCount    = 16;
+			pvi->TrueColorInfo.dwBitMasks[0] = 0xf800;
+			pvi->TrueColorInfo.dwBitMasks[1] = 0x7e0;
+			pvi->TrueColorInfo.dwBitMasks[2] = 0x1f;
+		}
+		break;
+	
 	}
 	pvi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER); //bitmapinfoheader结构体的长度
 	pvi->bmiHeader.biWidth = DEFAULT_WIDTH;

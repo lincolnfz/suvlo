@@ -80,7 +80,8 @@ BOOL CMainDlg::OnInitDialog(CWindow wndFocus, LPARAM lInitParam)
 	HWND hPlay = m_playwnd.Create( hwnd , CRect (0, 0, 0, 0) , NULL , 0 , 0 );
 	int ret = m_playwnd.SetDlgCtrlID(IDC_DLG_PLAY);
 	DWORD dw = GetLastError();
-	//CBkImageSlider* pBKVol = static_cast<CBkImageSlider*>( m_richView.FindChildByCmdID(IDC_VOL) );
+	//CBkImageSlider* pBKVol = static_cast<CBkImageSlider*>( m_richView.FindChildByCmdID(IDC_VOL) );	 
+	
 	
 	return FALSE;
 }
@@ -89,6 +90,22 @@ BOOL CMainDlg::OnInitDialog(CWindow wndFocus, LPARAM lInitParam)
 
 void CMainDlg::play( const char* url )
 {
+	//设置videorender播放窗口到程序的界面上
+	HWND hPlay = m_playwnd.m_hWnd;
+	IBaseFilter *pIBaseFilter = NULL;
+	if ( SUCCEEDED( m_pGraphBuilder->FindFilterByName( filterNam[1] , &pIBaseFilter ) ) )
+	{
+		IVideoWindow *pIVideoWindow = NULL;
+		if ( SUCCEEDED(pIBaseFilter->QueryInterface( IID_IVideoWindow , (void**)&pIVideoWindow )) )
+		{
+			pIVideoWindow->put_Owner( (OAHWND)hPlay );
+			pIVideoWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS);
+			RECT rc;
+			::GetClientRect( hPlay , &rc );
+			pIVideoWindow->SetWindowPosition(0 , 0, rc.right , rc.bottom);
+			pIVideoWindow->Release();
+		}
+	}
 	/*HANDLE hThread;
 	unsigned threadID;
 	hThread = (HANDLE)_beginthreadex( NULL , NULL , &run , (void*)url , 0 , &threadID );
@@ -192,7 +209,7 @@ BOOL CMainDlg::Init()
 	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
 	{
 		m_pGraphBuilder->AddFilter( pVideoRenderFilter , filterNam[1] );
-		pVideoRenderFilter->Release();	
+		pVideoRenderFilter->Release();
 	}
 	
 	

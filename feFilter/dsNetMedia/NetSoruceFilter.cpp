@@ -105,7 +105,8 @@ HRESULT CVideoStreamPin::CheckMediaType(const CMediaType *pMediaType)
 	if (SubType == NULL)
 		return E_INVALIDARG;
 
-	if( (*SubType != WMMEDIASUBTYPE_RGB24 )
+	if( (*SubType != MEDIASUBTYPE_RGB565 )
+		&& (*SubType != WMMEDIASUBTYPE_RGB24 )
 		&& (*SubType != WMMEDIASUBTYPE_I420 )
 		)
 	{
@@ -132,7 +133,7 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 		return E_INVALIDARG;
 
 	// Have we run off the end of types?
-	if(iPosition > 1)
+	if(iPosition > 2)
 		return VFW_S_NO_MORE_ITEMS;
 
 	VIDEOINFO *pvi = (VIDEOINFO *) pMediaType->AllocFormatBuffer(sizeof(VIDEOINFO));
@@ -151,6 +152,12 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 		}
 		break;
 	case 1:
+		{
+			pvi->bmiHeader.biCompression = BI_RGB;
+			pvi->bmiHeader.biBitCount    = 16;
+		}
+		break;
+	case 2:
 		{
 			pvi->bmiHeader.biCompression = BI_RGB;
 			pvi->bmiHeader.biBitCount    = 24;
@@ -297,6 +304,7 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
 	char *lpurl = new char[size];
 	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
+	//播放远程视频
 	//m_wrapmms.play( lpurl );
 	delete []lpurl;
 	IGraphBuilder *pGraphBuilder = NULL;
@@ -316,9 +324,16 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 					if ( SUCCEEDED(hr) )
 					{
 						//联接成功
-						this->Run(0);
+						IMediaFilter *pIMediaFilter = NULL;
+						if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
+						{
+							pIMediaFilter->Run(0); //开始播放视频
+							pIMediaFilter->Release();
+						}
+						
+						/*this->Run(0);
 						this->Stop();
-						m_pVideoPin->Disconnect();
+						m_pVideoPin->Disconnect();*/
 					}						
 					else if ( VFW_E_CANNOT_CONNECT == hr )
 					{

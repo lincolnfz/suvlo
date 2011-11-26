@@ -48,6 +48,11 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 
 	VIDEOINFOHEADER *pvih = (VIDEOINFOHEADER*)m_mt.pbFormat;
 
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+	if ( pNetSourceFilter )
+	{
+	}
+
 	return S_OK;
 }
 
@@ -312,12 +317,7 @@ CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *ph
 
 STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 {
-	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
-	char *lpurl = new char[size];
-	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
-	//播放远程视频
-	//m_wrapmms.play( lpurl );
-	delete []lpurl;
+	
 	IGraphBuilder *pGraphBuilder = NULL;
 	IFilterGraph *pFilterGraph = GetFilterGraph();
 	HRESULT hr = S_OK;
@@ -357,6 +357,13 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 			pGraphBuilder->Release();
 		}
 	}
+
+	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
+	char *lpurl = new char[size];
+	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
+	//播放远程视频
+	m_wrapmms.play( lpurl );
+	delete []lpurl;
 	
 	
 	return S_OK;

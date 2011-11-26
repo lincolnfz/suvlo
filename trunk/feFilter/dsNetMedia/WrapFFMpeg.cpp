@@ -279,7 +279,6 @@ void init_new_protocol()
 
 CWrapFFMpeg::CWrapFFMpeg(void)
 {
-	m_notifyFun = NULL;
 	InitializeCriticalSection(&m_calcSection);
 	Init();
 	m_pVideoState = NULL;
@@ -1340,11 +1339,6 @@ unsigned __stdcall readThread( void* arg )
 	if (is->video_stream < 0 && is->audio_stream < 0) {
 		ret = -1;
 		goto fail;
-	}
-
-	if ( pWrapFFMpeg->m_notifyFun )
-	{
-		pWrapFFMpeg->m_notifyFun(); //通知调用对像，可以准备从队列中得到数据了
 	}
 
 	//下面是分析解码数据包

@@ -85,9 +85,6 @@ protected:
 	VideoState* m_pVideoState;
 
 public:
-	NotifyParserOK m_notifyFun;
-
-public:
 	CWrapFFMpeg(void);
 	~CWrapFFMpeg(void);
 	

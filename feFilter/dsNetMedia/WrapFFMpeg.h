@@ -5,36 +5,9 @@
 #include <limits.h>
 #include "common.h"
 
-extern "C"
-{
-#include "libavutil/avstring.h"
-	//#include "libavutil/colorspace.h"
-#include "libavutil/mathematics.h"
-#include "libavutil/pixdesc.h"
-#include "libavutil/imgutils.h"
-#include "libavutil/dict.h"
-#include "libavutil/parseutils.h"
-#include "libavutil/samplefmt.h"
-#include "libavutil/avassert.h"
-#include "libavutil/avutil.h"	
-#include "libavformat/avformat.h"
-#include "libavdevice/avdevice.h"
-#include "libswscale/swscale.h"
-	//#include "libavcodec/audioconvert.h"
-#include "libavutil/opt.h"
-#include "libavcodec/avfft.h"
-
-# include "libavfilter/avcodec.h"
-# include "libavfilter/avfilter.h"
-# include "libavfilter/avfiltergraph.h"
-# include "libavfilter/buffersink.h"
-}
-
 #define BUF_SIZE 32768
 #define MEM_BUF_SIZE 32768
 #define CYCLE_BUF_SIZE 131072
-
-typedef struct VideoState VideoState;
 
 class CWrapFFMpeg
 {

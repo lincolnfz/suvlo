@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "NetSoruceFilter.h"
-#include "common.h"
 #include "filterUtil.h"
 #include <wmsdkidl.h>
 
@@ -9,6 +8,8 @@ WCHAR filterNam[][20]={
 	L"dsNetMedia",
 	L"ViderRender"
 };
+
+CNetSourceFilter *g_pNetSourceFilter = NULL;
 
 #define  DEFAULT_WIDTH 720
 #define DEFAULT_HEIGHT 480
@@ -51,6 +52,18 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 	if ( pNetSourceFilter )
 	{
+		AVFrameLink *pAVFrameLink = pNetSourceFilter->getVideoFrameLink();
+		if ( pAVFrameLink )
+		{
+			 AVFrame *pAVFrame = getAVFrameLink( pAVFrameLink );
+			 if ( pAVFrame )
+			 {
+				 //处理解码出来的数据
+
+
+				 av_free( pAVFrame);
+			 }
+		}
 	}
 
 	return S_OK;
@@ -272,6 +285,8 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 {
 	m_pVideoPin = new CVideoStreamPin( phr , this );
 	m_pAudioPin = new CAudioStreamPin( phr , this );
+	initAVFrameLink( &m_pAVFrameLink );
+	g_pNetSourceFilter = this;
 	//m_pVideoPin->AddRef();
 	//m_pAudioPin->AddRef();
 	if (phr)
@@ -297,7 +312,7 @@ CNetSourceFilter::~CNetSourceFilter(void)
 	{
 		m_pAudioPin->Release();
 	}*/
-	
+	destoryAVFrameLink( &m_pAVFrameLink );
 }
 
 CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)

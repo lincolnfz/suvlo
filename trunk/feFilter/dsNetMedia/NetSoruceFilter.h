@@ -63,11 +63,12 @@ public:
 	STDMETHODIMP seek(ULONG64 utime);
 
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv);
-
+	
+	AVFrameLink *getVideoFrameLink(){ return m_pAVFrameLink;}
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
-	VideoState* m_pVideoState;
 	HANDLE m_hAlive_pack_event;
+	AVFrameLink *m_pAVFrameLink;
 };
 

@@ -9,6 +9,8 @@
 #define MEM_BUF_SIZE 32768
 #define CYCLE_BUF_SIZE 131072
 
+typedef struct _tagVideoState VideoState;
+
 class CWrapFFMpeg
 {
 protected:

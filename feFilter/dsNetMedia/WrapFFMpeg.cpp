@@ -16,153 +16,6 @@
 
 extern CNetSourceFilter *g_pNetSourceFilter;
 
-/* NOTE: the size must be big enough to compensate the hardware audio buffersize size */
-#define SAMPLE_ARRAY_SIZE (2*65536)
-
-typedef struct _tagPacketQueue {
-	AVPacketList *first_pkt, *last_pkt;
-	int nb_packets;
-	int size;
-	int abort_request;
-	HANDLE mutex;
-	HANDLE cond;
-} PacketQueue;
-
-#define VIDEO_PICTURE_QUEUE_SIZE 2
-#define SUBPICTURE_QUEUE_SIZE 4
-
-typedef struct _tagVideoPicture {
-	double pts;                                  ///<presentation time stamp for this picture
-	double duration;                             ///<expected duration of the frame
-	int64_t pos;                                 ///<byte position in file
-	int skip;
-	//SDL_Overlay *bmp;
-	int width, height; /* source height & width */
-	int allocated;
-	int reallocate;
-	enum PixelFormat pix_fmt;
-
-#if CONFIG_AVFILTER
-	AVFilterBufferRef *picref;
-#endif
-} VideoPicture;
-
-typedef struct _tagSubPicture {
-	double pts; /* presentation time stamp for this picture */
-	AVSubtitle sub;
-} SubPicture;
-
-typedef struct _tagVideoState {
-    //SDL_Thread *read_tid;
-    //SDL_Thread *video_tid;
-    //SDL_Thread *refresh_tid;
-	HANDLE video_tid;
-	HANDLE decode_audio_thread;
-    AVInputFormat *iformat;
-    int no_background;
-    int abort_request;
-    int paused;
-    int last_paused;
-    int seek_req;
-    int seek_flags;
-    int64_t seek_pos;
-    int64_t seek_rel;
-    int read_pause_return;
-    AVFormatContext *ic;
-
-    int audio_stream;
-
-    int av_sync_type;
-    double external_clock; /* external clock base */
-    int64_t external_clock_time;
-
-    double audio_clock;
-    double audio_diff_cum; /* used for AV difference average computation */
-    double audio_diff_avg_coef;
-    double audio_diff_threshold;
-    int audio_diff_avg_count;
-    AVStream *audio_st;
-    PacketQueue audioq;
-    int audio_hw_buf_size;
-    /* samples output by the codec. we reserve more space for avsync
-       compensation, resampling and format conversion */
-    DECLARE_ALIGNED(16,uint8_t,audio_buf1)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
-    DECLARE_ALIGNED(16,uint8_t,audio_buf2)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
-    uint8_t *audio_buf;
-    unsigned int audio_buf_size; /* in bytes */
-    int audio_buf_index; /* in bytes */
-    int audio_write_buf_size;
-    AVPacket audio_pkt_temp;
-    AVPacket audio_pkt;
-    enum AVSampleFormat audio_src_fmt;
-    enum AVSampleFormat audio_tgt_fmt;
-    int audio_src_channels;
-    int audio_tgt_channels;
-    int64_t audio_src_channel_layout;
-    int64_t audio_tgt_channel_layout;
-    int audio_src_freq;
-    int audio_tgt_freq;
-    struct SwrContext *swr_ctx;
-    double audio_current_pts;
-    double audio_current_pts_drift;
-    int frame_drops_early;
-    int frame_drops_late;
-
-    enum ShowMode {
-        SHOW_MODE_NONE = -1, SHOW_MODE_VIDEO = 0, SHOW_MODE_WAVES, SHOW_MODE_RDFT, SHOW_MODE_NB
-    } show_mode;
-    int16_t sample_array[SAMPLE_ARRAY_SIZE];
-    int sample_array_index;
-    int last_i_start;
-    RDFTContext *rdft;
-    int rdft_bits;
-    FFTSample *rdft_data;
-    int xpos;
-
-    //SDL_Thread *subtitle_tid;
-    int subtitle_stream;
-    int subtitle_stream_changed;
-    AVStream *subtitle_st;
-    PacketQueue subtitleq;
-    SubPicture subpq[SUBPICTURE_QUEUE_SIZE];
-    int subpq_size, subpq_rindex, subpq_windex;
-    //SDL_mutex *subpq_mutex;
-    //SDL_cond *subpq_cond;
-
-    double frame_timer;
-    double frame_last_pts;
-    double frame_last_duration;
-    double frame_last_dropped_pts;
-    double frame_last_returned_time;
-    double frame_last_filter_delay;
-    int64_t frame_last_dropped_pos;
-    double video_clock;                          ///<pts of last decoded frame / predicted pts of next decoded frame
-    int video_stream;
-    AVStream *video_st;
-    PacketQueue videoq;
-    double video_current_pts;                    ///<current displayed pts (different from video_clock if frame fifos are used)
-    double video_current_pts_drift;              ///<video_current_pts - time (av_gettime) at which we updated video_current_pts - used to have running video pts
-    int64_t video_current_pos;                   ///<current displayed file pos
-    VideoPicture pictq[VIDEO_PICTURE_QUEUE_SIZE];
-    int pictq_size, pictq_rindex, pictq_windex;
-    //SDL_mutex *pictq_mutex;
-    //SDL_cond *pictq_cond;
-	HANDLE pictq_mutex;
-	HANDLE pictq_cond;
-#if !CONFIG_AVFILTER
-    struct SwsContext *img_convert_ctx;
-#endif
-
-    char filename[1024];
-    int width, height, xleft, ytop;
-    int step;
-
-#if CONFIG_AVFILTER
-    AVFilterContext *out_video_filter;          ///<the last filter in the video chain
-#endif
-
-    int refresh;
-} VideoState;
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
 #define MIN_AUDIOQ_SIZE (20 * 16 * 1024)
@@ -481,8 +334,8 @@ static int packet_queue_put(PacketQueue *q, AVPacket *pkt)
 	q->nb_packets++;
 	q->size += pkt1->pkt.size + sizeof(*pkt1);
 	/* XXX: should duplicate packet data in DV case */
-	ReleaseMutex( q->mutex );	
 	SetEvent( q->cond );
+	ReleaseMutex( q->mutex );		
 	
 	return 0;
 }
@@ -492,7 +345,7 @@ static void packet_queue_init(PacketQueue *q)
 {
 	memset(q, 0, sizeof(PacketQueue));
 	q->mutex = CreateMutex(NULL , FALSE , NULL);
-	q->cond = CreateEvent( NULL , TRUE , FALSE , NULL );	
+	q->cond = CreateEvent( NULL , FALSE , FALSE , NULL );	
 	packet_queue_put(q, &flush_pkt);
 }
 
@@ -552,7 +405,7 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
 			q->first_pkt = pkt1->next;
 			if (!q->first_pkt)
 				q->last_pkt = NULL;
-			q->nb_packets--;
+			--(q->nb_packets);
 			q->size -= pkt1->pkt.size + sizeof(*pkt1);
 			*pkt = pkt1->pkt;
 			av_free(pkt1);
@@ -564,7 +417,6 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
 		} else {
 			//SDL_CondWait(q->cond, q->mutex);			
 			ReleaseMutex( q->mutex );			
-			ResetEvent( q->cond );
 			WaitForSingleObject( q->cond , INFINITE );
 			WaitForSingleObject( q->mutex , INFINITE );			
 		}
@@ -858,6 +710,7 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 		pts = pts_int*av_q2d(is->video_st->time_base);
 
 		//ret = queue_picture(is, frame, pts, pos);
+		//写到directshow的内存中
 		putAVFrameLink( pAVFrameLink , frame );
 
 		//if (ret < 0)
@@ -1176,8 +1029,7 @@ int initcodec( char* buf, int len , AVFormatContext** pfCtx )
 		NULL, 0);
 
 	av_init_packet(&flush_pkt);
-	//flush_pkt.data = "FLUSH";
-	//flush_pkt.
+	flush_pkt.data = (uint8_t*)"FLUSH";
 
 	//以上代码把音,视频的数据流分离出来
 	if ( st_index[AVMEDIA_TYPE_VIDEO] >= 0  )
@@ -1325,7 +1177,7 @@ unsigned __stdcall readThread( void* arg )
 
 	/* open the streams */
 	if (st_index[AVMEDIA_TYPE_AUDIO] >= 0) {
-		stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO]);
+		//stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO]);
 	}
 
 	ret=-1;
@@ -1340,7 +1192,7 @@ unsigned __stdcall readThread( void* arg )
 	*/
 
 	if (st_index[AVMEDIA_TYPE_SUBTITLE] >= 0) {
-		stream_component_open(is, st_index[AVMEDIA_TYPE_SUBTITLE]);
+		//stream_component_open(is, st_index[AVMEDIA_TYPE_SUBTITLE]);
 	}
 
 	if (is->video_stream < 0 && is->audio_stream < 0) {
@@ -1402,11 +1254,11 @@ unsigned __stdcall readThread( void* arg )
 			(double)(start_time != AV_NOPTS_VALUE ? start_time : 0)/1000000
 			<= ((double)duration/1000000);
 		if (pkt->stream_index == is->audio_stream && pkt_in_play_range) {
-			packet_queue_put(&is->audioq, pkt);
+			//packet_queue_put(&is->audioq, pkt);
 		} else if (pkt->stream_index == is->video_stream && pkt_in_play_range) {
 			packet_queue_put(&is->videoq, pkt);
 		} else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
-			packet_queue_put(&is->subtitleq, pkt);
+			//packet_queue_put(&is->subtitleq, pkt);
 		} else {
 			av_free_packet(pkt);
 		}

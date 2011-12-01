@@ -59,8 +59,15 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 			 if ( pAVFrame )
 			 {
 				 //处理解码出来的数据
-
-
+				 if( IsEqualGUID(m_mt.subtype , WMMEDIASUBTYPE_RGB32 ) == 0  ){
+				 }
+				 BYTE *pCpy = pData;
+				 memcpy( pCpy , pAVFrame->data[0] , pAVFrame->linesize[0] );
+				 pCpy += pAVFrame->linesize[0];
+				 memcpy( pCpy , pAVFrame->data[1] , pAVFrame->linesize[1] );
+				 pCpy += pAVFrame->linesize[1];
+				 memcpy( pCpy , pAVFrame->data[2] , pAVFrame->linesize[2] );
+				 pSamp->SetMediaTime( &pAVFrame->pts , &pAVFrame->pts );
 				 av_free( pAVFrame);
 			 }
 		}

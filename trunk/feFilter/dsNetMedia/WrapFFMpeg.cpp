@@ -14,7 +14,7 @@
 #pragma comment( lib , "../../lib/avutil.lib" )
 #pragma comment( lib , "../../lib/swscale.lib" )
 
-extern CNetSourceFilter *g_pNetSourceFilter;
+VideoState *g_pVideoState = NULL;
 
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
@@ -103,6 +103,7 @@ static AVPacket flush_pkt;
 AVDictionary  *format_opts , *codec_opts;
 char* pMemBuf;
 CWrapFFMpeg* pWrapFFMpeg;
+extern CNetSourceFilter *g_pNetSourceFilter;
 
 int mem_open(URLContext *h, const char *url, int flags)
 {
@@ -1291,6 +1292,7 @@ void CWrapFFMpeg::notify_new_launch( )
 	flush_pkt.data= (uint8_t*)"FLUSH";
 	m_pVideoState = (VideoState*)av_mallocz(sizeof(VideoState));
 	VideoState* is = m_pVideoState;
+	g_pVideoState = m_pVideoState;
 	is->pictq_cond = CreateEvent( NULL , FALSE , FALSE , NULL );
 	is->pictq_mutex = CreateMutex( NULL , FALSE , NULL );
 	av_strlcpy( is->filename, file, strlen(file) );

@@ -10,6 +10,7 @@ WCHAR filterNam[][20]={
 };
 
 CNetSourceFilter *g_pNetSourceFilter = NULL;
+extern VideoState *g_pVideoState;
 
 #define  DEFAULT_WIDTH 720
 #define DEFAULT_HEIGHT 480
@@ -31,6 +32,87 @@ HRESULT CVideoStreamPin::SetMediaType(const CMediaType * pmt)
 	__super::SetMediaType(pmt);
 
 	return S_OK;
+}
+
+void SaveAsBMP (AVPicture *pFrameRGB, int width, int height, int index, int bpp)
+{
+	char buf[5] = {0};
+	BITMAPFILEHEADER bmpheader;
+	BITMAPINFOHEADER bmpinfo;
+	FILE *fp;
+
+	char filename[20] = "C:\\test";
+	_itoa (index, buf, 10);
+	strcat (filename, buf);
+	strcat (filename, ".bmp");
+
+	if ( (fp=fopen(filename,"wb+")) == NULL )
+	{
+		printf ("open file failed!\n");
+		return;
+	}
+
+	bmpheader.bfType = 0x4d42;
+	bmpheader.bfReserved1 = 0;
+	bmpheader.bfReserved2 = 0;
+	bmpheader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	bmpheader.bfSize = bmpheader.bfOffBits + width*height*bpp/8;
+
+	bmpinfo.biSize = sizeof(BITMAPINFOHEADER);
+	bmpinfo.biWidth = width;
+	bmpinfo.biHeight = -height;
+	bmpinfo.biPlanes = 1;
+	bmpinfo.biBitCount = bpp;
+	bmpinfo.biCompression = BI_RGB;
+	bmpinfo.biSizeImage = (width*bpp+31)/32*4*height;
+	bmpinfo.biXPelsPerMeter = 100;
+	bmpinfo.biYPelsPerMeter = 100;
+	bmpinfo.biClrUsed = 0;
+	bmpinfo.biClrImportant = 0;
+
+	fwrite (&bmpheader, sizeof(bmpheader), 1, fp);
+	fwrite (&bmpinfo, sizeof(bmpinfo), 1, fp);
+	fwrite (pFrameRGB->data[0], width*height*bpp/8, 1, fp);
+
+	fclose(fp);
+}
+
+int writeBmp2Buf( BYTE *pDst , AVPicture *pAVPic , int width, int height, int bpp ){
+	BITMAPFILEHEADER bmpheader;
+	BITMAPINFOHEADER bmpinfo;
+
+	bmpheader.bfType = 0x4d42;
+	bmpheader.bfReserved1 = 0;
+	bmpheader.bfReserved2 = 0;
+	bmpheader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	bmpheader.bfSize = bmpheader.bfOffBits + width*height*bpp/8;
+
+	bmpinfo.biSize = sizeof(BITMAPINFOHEADER);
+	bmpinfo.biWidth = width;
+	bmpinfo.biHeight = -height;
+	bmpinfo.biPlanes = 1;
+	bmpinfo.biBitCount = bpp;
+	bmpinfo.biCompression = BI_RGB;
+	bmpinfo.biSizeImage = (width*bpp+31)/32*4*height;
+	bmpinfo.biXPelsPerMeter = 100;
+	bmpinfo.biYPelsPerMeter = 100;
+	bmpinfo.biClrUsed = 0;
+	bmpinfo.biClrImportant = 0;
+
+	int nlen = 0;
+	/*
+	nlen = sizeof(bmpheader);
+	memcpy( pDst , &bmpheader , nlen );
+	pDst += nlen;
+	*/
+
+	nlen = sizeof(bmpinfo);
+	memcpy( pDst , &bmpinfo , nlen );
+	pDst += nlen;
+
+	nlen = width*height*bpp/8;
+	memcpy(pDst , &bmpinfo , nlen );
+	return 0;
 }
 
 //填充样本
@@ -55,24 +137,37 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		AVFrameLink *pAVFrameLink = pNetSourceFilter->getVideoFrameLink();
 		if ( pAVFrameLink )
 		{
-			 AVFrame *pAVFrame = getAVFrameLink( pAVFrameLink );
-			 if ( pAVFrame )
+			 AVFrame *pAVFrame = getAVFrameLink( pAVFrameLink , 1 );
+			 g_pVideoState->img_convert_ctx = sws_getCachedContext( g_pVideoState->img_convert_ctx ,
+				 g_pVideoState->video_st->codec->width ,
+				 g_pVideoState->video_st->codec->height ,
+				 g_pVideoState->video_st->codec->pix_fmt , 
+				 g_pVideoState->video_st->codec->width ,
+				 g_pVideoState->video_st->codec->height ,
+				 PIX_FMT_RGB32 ,  SWS_BICUBIC , NULL , NULL , NULL );
+			 if ( g_pVideoState->img_convert_ctx )
 			 {
-				 //处理解码出来的数据
-				 if( IsEqualGUID(m_mt.subtype , WMMEDIASUBTYPE_RGB32 ) == 0  ){
-				 }
-				 BYTE *pCpy = pData;
-				 memcpy( pCpy , pAVFrame->data[0] , pAVFrame->linesize[0] );
-				 pCpy += pAVFrame->linesize[0];
-				 memcpy( pCpy , pAVFrame->data[1] , pAVFrame->linesize[1] );
-				 pCpy += pAVFrame->linesize[1];
-				 memcpy( pCpy , pAVFrame->data[2] , pAVFrame->linesize[2] );
-				 pSamp->SetMediaTime( &pAVFrame->pts , &pAVFrame->pts );
-				 av_free( pAVFrame);
+				 AVPicture pict;
+				// AVPicture *pRGBFrame = NULL;
+				int ret = avpicture_alloc( &pict , PIX_FMT_RGB32 , 
+					 g_pVideoState->video_st->codec->width , 
+					 g_pVideoState->video_st->codec->height);
+				//转换成rgb
+				ret = sws_scale(g_pVideoState->img_convert_ctx , 
+									 pAVFrame->data , pAVFrame->linesize , 
+									 0 , g_pVideoState->video_st->codec->height , pict.data , pict.linesize );
+				static int idx = 0;
+				++idx;
+				writeBmp2Buf( pData , &pict , 
+					g_pVideoState->video_st->codec->width , 
+					g_pVideoState->video_st->codec->height , 32 );
+				//SaveAsBMP( &pict , g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , idx , 32 );
+				avpicture_free( &pict );
 			 }
+			 av_free( pAVFrame);
 		}
 	}
-
+	pSamp->SetSyncPoint(TRUE);
 	return S_OK;
 }
 

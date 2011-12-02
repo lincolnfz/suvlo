@@ -113,7 +113,7 @@ typedef struct _tagVideoState {
     int64_t audio_tgt_channel_layout;
     int audio_src_freq;
     int audio_tgt_freq;
-    struct SwrContext *swr_ctx;
+    struct SwsContext *img_convert_ctx;
     double audio_current_pts;
     double audio_current_pts_drift;
     int frame_drops_early;
@@ -160,9 +160,9 @@ typedef struct _tagVideoState {
     //SDL_cond *pictq_cond;
 	HANDLE pictq_mutex;
 	HANDLE pictq_cond;
-#if !CONFIG_AVFILTER
-    struct SwsContext *img_convert_ctx;
-#endif
+//#if !CONFIG_AVFILTER
+//    struct SwsContext *img_convert_ctx;
+//#endif
 
     char filename[1024];
     int width, height, xleft, ytop;
@@ -193,7 +193,7 @@ int initAVFrameLink( AVFrameLink **avframelink );
 
 int putAVFrameLink( AVFrameLink *avframelink , AVFrame* avframe);
 
-AVFrame* getAVFrameLink( AVFrameLink *avframelink );
+AVFrame* getAVFrameLink( AVFrameLink *avframelink , int block );
 
 int flushAVFrameLink( AVFrameLink *avframelink );
 

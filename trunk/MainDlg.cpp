@@ -98,11 +98,13 @@ void CMainDlg::play( const char* url )
 		IVideoWindow *pIVideoWindow = NULL;
 		if ( SUCCEEDED(pIBaseFilter->QueryInterface( IID_IVideoWindow , (void**)&pIVideoWindow )) )
 		{
+			pIVideoWindow->put_MessageDrain((OAHWND)hPlay);
 			pIVideoWindow->put_Owner( (OAHWND)hPlay );
 			pIVideoWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS);
 			RECT rc;
 			::GetClientRect( hPlay , &rc );
 			pIVideoWindow->SetWindowPosition(0 , 0, rc.right , rc.bottom);
+			pIVideoWindow->put_Visible(OATRUE);
 			pIVideoWindow->Release();
 		}
 	}

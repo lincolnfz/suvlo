@@ -12,8 +12,8 @@ WCHAR filterNam[][20]={
 CNetSourceFilter *g_pNetSourceFilter = NULL;
 extern VideoState *g_pVideoState;
 
-#define  DEFAULT_WIDTH 720
-#define DEFAULT_HEIGHT 480
+#define  DEFAULT_WIDTH 208
+#define DEFAULT_HEIGHT 160
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out")
@@ -34,7 +34,7 @@ HRESULT CVideoStreamPin::SetMediaType(const CMediaType * pmt)
 	return S_OK;
 }
 
-void SaveAsBMP (AVPicture *pFrameRGB, int width, int height, int index, int bpp)
+void SaveAsBMP (AVPicture *pAVPic, int width, int height, int index, int bpp)
 {
 	char buf[5] = {0};
 	BITMAPFILEHEADER bmpheader;
@@ -72,7 +72,7 @@ void SaveAsBMP (AVPicture *pFrameRGB, int width, int height, int index, int bpp)
 
 	fwrite (&bmpheader, sizeof(bmpheader), 1, fp);
 	fwrite (&bmpinfo, sizeof(bmpinfo), 1, fp);
-	fwrite (pFrameRGB->data[0], width*height*bpp/8, 1, fp);
+	fwrite (pAVPic->data[0], width*height*bpp/8, 1, fp);
 
 	fclose(fp);
 }
@@ -106,12 +106,12 @@ int writeBmp2Buf( BYTE *pDst , AVPicture *pAVPic , int width, int height, int bp
 	pDst += nlen;
 	*/
 
-	nlen = sizeof(bmpinfo);
-	memcpy( pDst , &bmpinfo , nlen );
-	pDst += nlen;
+	//nlen = sizeof(bmpinfo);
+	//memcpy( pDst , &bmpinfo , nlen );
+	//pDst += nlen;
 
 	nlen = width*height*bpp/8;
-	memcpy(pDst , &bmpinfo , nlen );
+	memcpy(pDst , pAVPic->data[0] , nlen );
 	return 0;
 }
 
@@ -158,15 +158,17 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 									 0 , g_pVideoState->video_st->codec->height , pict.data , pict.linesize );
 				static int idx = 0;
 				++idx;
-				writeBmp2Buf( pData , &pict , 
+				memcpy(pData , pict.data[0] , cbData );
+				/*writeBmp2Buf( pData , &pict , 
 					g_pVideoState->video_st->codec->width , 
-					g_pVideoState->video_st->codec->height , 32 );
+					g_pVideoState->video_st->codec->height , 32 );*/
 				//SaveAsBMP( &pict , g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , idx , 32 );
 				avpicture_free( &pict );
 			 }
 			 av_free( pAVFrame);
 		}
 	}
+	pSamp->SetMediaTime(NULL , NULL);
 	pSamp->SetSyncPoint(TRUE);
 	return S_OK;
 }
@@ -286,11 +288,14 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 		break;
 	case 3:
 		{
+			// 16 bit per pixel RGB565
 			pvi->bmiHeader.biCompression = BI_BITFIELDS;
 			pvi->bmiHeader.biBitCount    = 16;
-			pvi->TrueColorInfo.dwBitMasks[0] = 0xf800;
+			for(int i = 0; i < 3; i++)
+				pvi->TrueColorInfo.dwBitMasks[i] = bits565[i];
+			/*pvi->TrueColorInfo.dwBitMasks[0] = 0xf800;
 			pvi->TrueColorInfo.dwBitMasks[1] = 0x7e0;
-			pvi->TrueColorInfo.dwBitMasks[2] = 0x1f;
+			pvi->TrueColorInfo.dwBitMasks[2] = 0x1f;*/
 		}
 		break;
 	

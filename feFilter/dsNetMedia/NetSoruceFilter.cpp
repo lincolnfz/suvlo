@@ -60,7 +60,7 @@ void SaveAsBMP (AVPicture *pAVPic, int width, int height, int index, int bpp)
 
 	bmpinfo.biSize = sizeof(BITMAPINFOHEADER);
 	bmpinfo.biWidth = width;
-	bmpinfo.biHeight = -height;
+	bmpinfo.biHeight = height;
 	bmpinfo.biPlanes = 1;
 	bmpinfo.biBitCount = bpp;
 	bmpinfo.biCompression = BI_RGB;
@@ -153,18 +153,24 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				int ret = avpicture_alloc( &pict , PIX_FMT_RGB32 , 
 					 g_pVideoState->video_st->codec->width , 
 					 g_pVideoState->video_st->codec->height);
+				//倒置颠倒的图像
+				pAVFrame->data[0] = pAVFrame->data[0]+pAVFrame->linesize[0]*( g_pVideoState->video_st->codec->height-1 );
+				pAVFrame->data[1] = pAVFrame->data[1]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1;  
+				pAVFrame->data[2] = pAVFrame->data[2]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1; 
+				pAVFrame->linesize[0] *= -1;
+				pAVFrame->linesize[1] *= -1;  
+				pAVFrame->linesize[2] *= -1;
+				//倒置颠倒的图像 ok
+				
 				//转换成rgb
 				ret = sws_scale(g_pVideoState->img_convert_ctx , 
 									 pAVFrame->data , pAVFrame->linesize , 
 									 0 , g_pVideoState->video_st->codec->height , pict.data , pict.linesize );
-				
 				memcpy(pData , pict.data[0] , cbData );
-				/*
-				static int idx = 0;
-				++idx;
-				writeBmp2Buf( pData , &pict , 
-					g_pVideoState->video_st->codec->width , 
-					g_pVideoState->video_st->codec->height , 32 );*/
+				
+				pSamp->SetActualDataLength(cbData);
+				/*static int idx = 0;
+				++idx;*/
 				//SaveAsBMP( &pict , g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , idx , 32 );
 				avpicture_free( &pict );
 			 }
@@ -178,7 +184,7 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 	m_rtSampleTime += (LONG)m_iRepeatTime;
 	pSamp->SetMediaTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
 	pSamp->SetSyncPoint(TRUE);
-	return S_OK;
+	return NOERROR;
 }
 
 //申明大小

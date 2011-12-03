@@ -18,6 +18,12 @@ public:
 public:
 	virtual HRESULT SetMediaType(const CMediaType *);
 
+	// Resets the stream time to zero
+	HRESULT OnThreadCreate(void);
+
+	// Quality control notifications sent to us
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
+
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
 
@@ -29,6 +35,10 @@ protected:
 
 protected:
 	CCritSec m_cSharedState;            // Protects our internal state
+
+	int m_iRepeatTime;                  // Time in msec between frames
+	const int m_iDefaultRepeatTime;     // Initial m_iRepeatTime
+	CRefTime m_rtSampleTime;            // The time stamp for each sample
 
 };
 

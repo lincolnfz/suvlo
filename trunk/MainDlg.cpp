@@ -98,7 +98,7 @@ void CMainDlg::play( const char* url )
 		IVideoWindow *pIVideoWindow = NULL;
 		if ( SUCCEEDED(pIBaseFilter->QueryInterface( IID_IVideoWindow , (void**)&pIVideoWindow )) )
 		{
-			pIVideoWindow->put_MessageDrain((OAHWND)hPlay);
+			//pIVideoWindow->put_MessageDrain((OAHWND)hPlay);
 			pIVideoWindow->put_Owner( (OAHWND)hPlay );
 			pIVideoWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS);
 			RECT rc;

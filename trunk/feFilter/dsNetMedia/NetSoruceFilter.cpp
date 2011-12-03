@@ -16,7 +16,7 @@ extern VideoState *g_pVideoState;
 #define DEFAULT_HEIGHT 160
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
-	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out")
+	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(20)
 {
 
 	
@@ -126,6 +126,7 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 	// Access the sample's data buffer
 	pSamp->GetPointer(&pData);
 	cbData = pSamp->GetSize();
+	ZeroMemory( pData , cbData );
 	// Check that we're still using video
 	ASSERT(m_mt.formattype == FORMAT_VideoInfo);
 
@@ -156,10 +157,12 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				ret = sws_scale(g_pVideoState->img_convert_ctx , 
 									 pAVFrame->data , pAVFrame->linesize , 
 									 0 , g_pVideoState->video_st->codec->height , pict.data , pict.linesize );
+				
+				memcpy(pData , pict.data[0] , cbData );
+				/*
 				static int idx = 0;
 				++idx;
-				memcpy(pData , pict.data[0] , cbData );
-				/*writeBmp2Buf( pData , &pict , 
+				writeBmp2Buf( pData , &pict , 
 					g_pVideoState->video_st->codec->width , 
 					g_pVideoState->video_st->codec->height , 32 );*/
 				//SaveAsBMP( &pict , g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , idx , 32 );
@@ -168,7 +171,12 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 			 av_free( pAVFrame);
 		}
 	}
-	pSamp->SetMediaTime(NULL , NULL);
+	// The current time is the sample's start
+	CRefTime rtStart = m_rtSampleTime;
+
+	// Increment to find the finish time
+	m_rtSampleTime += (LONG)m_iRepeatTime;
+	pSamp->SetMediaTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
 	pSamp->SetSyncPoint(TRUE);
 	return S_OK;
 }
@@ -342,6 +350,45 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 	pMediaType-> SetSampleSize(vih.bmiHeader.biSizeImage);	
 	return S_OK;
 	*/
+}
+
+STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
+{
+	// Adjust the repeat rate.
+	if(q.Proportion<=0)
+	{
+		m_iRepeatTime = 1000;        // We don't go slower than 1 per second
+	}
+	else
+	{
+		m_iRepeatTime = m_iRepeatTime*1000 / q.Proportion;
+		if(m_iRepeatTime>1000)
+		{
+			m_iRepeatTime = 1000;    // We don't go slower than 1 per second
+		}
+		else if(m_iRepeatTime<10)
+		{
+			m_iRepeatTime = 10;      // We don't go faster than 100/sec
+		}
+	}
+
+	// skip forwards
+	if(q.Late > 0)
+		m_rtSampleTime += q.Late;
+
+	return NOERROR;
+}
+
+HRESULT CVideoStreamPin::OnThreadCreate(void)
+{
+	CAutoLock cAutoLockShared(&m_cSharedState);
+	m_rtSampleTime = 0;
+
+	// we need to also reset the repeat time in case the system
+	// clock is turned off after m_iRepeatTime gets very big
+	m_iRepeatTime = m_iDefaultRepeatTime;
+
+	return S_OK;
 }
 
 //ÒôÆµ½Ó¿Ú

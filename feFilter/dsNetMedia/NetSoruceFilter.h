@@ -33,12 +33,23 @@ protected:
 
 	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
 
+	//更新filter格式属性
+	void updateFmtInfo( const CMediaType * );
+	
+	//返回实际填充的大小
+	long generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *pFrame , 
+		int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+		int widthDst , int heightDst , PixelFormat pixFmtDst );
+
 protected:
 	CCritSec m_cSharedState;            // Protects our internal state
 
 	int m_iRepeatTime;                  // Time in msec between frames
 	const int m_iDefaultRepeatTime;     // Initial m_iRepeatTime
 	CRefTime m_rtSampleTime;            // The time stamp for each sample
+	PixelFormat m_piexlformat; //像素类型,当使用rgb使用时,供ffmpeg使用
+	int m_iPixelSize;
+	BOOL m_bYUV;
 
 };
 
@@ -74,11 +85,13 @@ public:
 
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv);
 	
-	AVFrameLink *getVideoFrameLink(){ return m_pAVFrameLink;}
+	AVFrameLink *getVideoFrameLink(){ return m_pVideoFrameLink;}
+	AVFrameLink *getAudioFrameLink(){return m_pAudioFrameLink;}
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
 	HANDLE m_hAlive_pack_event;
-	AVFrameLink *m_pAVFrameLink;
+	AVFrameLink *m_pVideoFrameLink;
+	AVFrameLink *m_pAudioFrameLink;
 };
 

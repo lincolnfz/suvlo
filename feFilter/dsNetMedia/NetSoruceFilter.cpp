@@ -143,8 +143,24 @@ long CVideoStreamPin::generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *
 		//转换成rgb
 		if ( !ret && sws_scale( *ctx , pFrame->data , pFrame->linesize , 0 , heightSrc , pict.data , pict.linesize ) )
 		{
-			lsize = pict.linesize[0]*heightSrc + pict.linesize[1]*heightSrc + pict.linesize[2]*heightSrc;
+			lsize = pict.linesize[0]*heightSrc;
 			memcpy(pDst , pict.data[0] , lsize );
+			pDst += lsize;
+			if ( pict.linesize[1] )
+			{
+				int tmplen = pict.linesize[1]*heightSrc;
+				memcpy(pDst , pict.data[1] , tmplen );
+				pDst += tmplen;
+				lsize += tmplen;
+			}
+			if ( pict.linesize[2] )
+			{
+				int tmplen = pict.linesize[2]*heightSrc;
+				memcpy(pDst , pict.data[2] , tmplen );
+				pDst += tmplen;
+				lsize += tmplen;
+			}
+
 			avpicture_free( &pict );
 		}
 				
@@ -181,6 +197,13 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				 if ( m_bYUV  )
 				 {
 					 //下位fliter要求使用yuv格式
+					 long lsize = generateRGBDate( pData , &g_pVideoState->img_convert_ctx , pAVFrame ,
+						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , g_pVideoState->video_st->codec->pix_fmt ,
+						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , m_piexlformat );
+					 if ( lsize > 0 )
+					 {
+						 pSamp->SetActualDataLength( lsize );					 
+					 }
 				 }
 				 else
 				 {

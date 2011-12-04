@@ -18,8 +18,9 @@ extern VideoState *g_pVideoState;
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(20)
 {
-
-	
+	m_piexlformat = PIX_FMT_RGB32;
+	m_iPixelSize = 4;
+	m_bYUV = FALSE;
 }
 
 CVideoStreamPin::~CVideoStreamPin()
@@ -27,10 +28,43 @@ CVideoStreamPin::~CVideoStreamPin()
 
 }
 
+void CVideoStreamPin::updateFmtInfo( const CMediaType * pmt)
+{
+	const GUID *SubType = pmt->Subtype();
+	VIDEOINFO *pvi = (VIDEOINFO*)pmt->Format();
+	m_iPixelSize = pvi->bmiHeader.biBitCount / 8;
+	if( IsEqualGUID(*SubType , WMMEDIASUBTYPE_I420 ) )
+	{
+		//m_piexlformat = 
+		m_bYUV = TRUE;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB32 ) )
+	{
+		m_piexlformat = PIX_FMT_RGB32;
+		m_bYUV = FALSE;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB24 ) )
+	{
+		m_piexlformat = PIX_FMT_RGB24;
+		m_bYUV = FALSE;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB565 ) )
+	{
+		m_piexlformat = PIX_FMT_RGB565;
+		m_bYUV = FALSE;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB555 ) )
+	{
+		m_piexlformat = PIX_FMT_RGB555;
+		m_bYUV = FALSE;
+	}
+}
+
 HRESULT CVideoStreamPin::SetMediaType(const CMediaType * pmt)
 {
 	__super::SetMediaType(pmt);
-
+	
+	updateFmtInfo(pmt);
 	return S_OK;
 }
 
@@ -77,42 +111,45 @@ void SaveAsBMP (AVPicture *pAVPic, int width, int height, int index, int bpp)
 	fclose(fp);
 }
 
-int writeBmp2Buf( BYTE *pDst , AVPicture *pAVPic , int width, int height, int bpp ){
-	BITMAPFILEHEADER bmpheader;
-	BITMAPINFOHEADER bmpinfo;
-
-	bmpheader.bfType = 0x4d42;
-	bmpheader.bfReserved1 = 0;
-	bmpheader.bfReserved2 = 0;
-	bmpheader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-	bmpheader.bfSize = bmpheader.bfOffBits + width*height*bpp/8;
-
-	bmpinfo.biSize = sizeof(BITMAPINFOHEADER);
-	bmpinfo.biWidth = width;
-	bmpinfo.biHeight = -height;
-	bmpinfo.biPlanes = 1;
-	bmpinfo.biBitCount = bpp;
-	bmpinfo.biCompression = BI_RGB;
-	bmpinfo.biSizeImage = (width*bpp+31)/32*4*height;
-	bmpinfo.biXPelsPerMeter = 100;
-	bmpinfo.biYPelsPerMeter = 100;
-	bmpinfo.biClrUsed = 0;
-	bmpinfo.biClrImportant = 0;
-
-	int nlen = 0;
-	/*
-	nlen = sizeof(bmpheader);
-	memcpy( pDst , &bmpheader , nlen );
-	pDst += nlen;
-	*/
-
-	//nlen = sizeof(bmpinfo);
-	//memcpy( pDst , &bmpinfo , nlen );
-	//pDst += nlen;
-
-	nlen = width*height*bpp/8;
-	memcpy(pDst , pAVPic->data[0] , nlen );
-	return 0;
+long CVideoStreamPin::generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *pFrame , 
+	int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+	int widthDst , int heightDst , PixelFormat pixFmtDst )
+{
+	long lsize = 0;
+	*ctx = sws_getCachedContext( *ctx ,
+		widthSrc ,
+		heightSrc ,
+		pixFmtSrc , 
+		widthDst ,
+		heightDst ,
+		pixFmtDst ,  SWS_BICUBIC , NULL , NULL , NULL );
+	if ( *ctx )
+	{
+		 AVPicture pict;
+		int ret = avpicture_alloc( &pict , pixFmtDst , 
+				widthDst , 
+				heightDst);
+		//倒置颠倒的图像
+		/*
+		pAVFrame->data[0] = pAVFrame->data[0]+pAVFrame->linesize[0]*( g_pVideoState->video_st->codec->height-1 );
+		pAVFrame->data[1] = pAVFrame->data[1]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1;  
+		pAVFrame->data[2] = pAVFrame->data[2]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1; 
+		pAVFrame->linesize[0] *= -1;
+		pAVFrame->linesize[1] *= -1;  
+		pAVFrame->linesize[2] *= -1;
+		*/
+		//倒置颠倒的图像 ok
+				
+		//转换成rgb
+		if ( !ret && sws_scale( *ctx , pFrame->data , pFrame->linesize , 0 , heightSrc , pict.data , pict.linesize ) )
+		{
+			lsize = pict.linesize[0]*heightSrc + pict.linesize[1]*heightSrc + pict.linesize[2]*heightSrc;
+			memcpy(pDst , pict.data[0] , lsize );
+			avpicture_free( &pict );
+		}
+				
+	}
+	return lsize;
 }
 
 //填充样本
@@ -139,51 +176,40 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		if ( pAVFrameLink )
 		{
 			 AVFrame *pAVFrame = getAVFrameLink( pAVFrameLink , 1 );
-			 g_pVideoState->img_convert_ctx = sws_getCachedContext( g_pVideoState->img_convert_ctx ,
-				 g_pVideoState->video_st->codec->width ,
-				 g_pVideoState->video_st->codec->height ,
-				 g_pVideoState->video_st->codec->pix_fmt , 
-				 g_pVideoState->video_st->codec->width ,
-				 g_pVideoState->video_st->codec->height ,
-				 PIX_FMT_RGB32 ,  SWS_BICUBIC , NULL , NULL , NULL );
-			 if ( g_pVideoState->img_convert_ctx )
+			 if ( pAVFrame )
 			 {
-				 AVPicture pict;
-				// AVPicture *pRGBFrame = NULL;
-				int ret = avpicture_alloc( &pict , PIX_FMT_RGB32 , 
-					 g_pVideoState->video_st->codec->width , 
-					 g_pVideoState->video_st->codec->height);
-				//倒置颠倒的图像
-				pAVFrame->data[0] = pAVFrame->data[0]+pAVFrame->linesize[0]*( g_pVideoState->video_st->codec->height-1 );
-				pAVFrame->data[1] = pAVFrame->data[1]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1;  
-				pAVFrame->data[2] = pAVFrame->data[2]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1; 
-				pAVFrame->linesize[0] *= -1;
-				pAVFrame->linesize[1] *= -1;  
-				pAVFrame->linesize[2] *= -1;
-				//倒置颠倒的图像 ok
-				
-				//转换成rgb
-				ret = sws_scale(g_pVideoState->img_convert_ctx , 
-									 pAVFrame->data , pAVFrame->linesize , 
-									 0 , g_pVideoState->video_st->codec->height , pict.data , pict.linesize );
-				memcpy(pData , pict.data[0] , cbData );
-				
-				pSamp->SetActualDataLength(cbData);
-				/*static int idx = 0;
-				++idx;*/
-				//SaveAsBMP( &pict , g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , idx , 32 );
-				avpicture_free( &pict );
+				 if ( m_bYUV  )
+				 {
+					 //下位fliter要求使用yuv格式
+				 }
+				 else
+				 {
+					 //下位fliter要求使用rgb格式
+					 long lsize = generateRGBDate( pData , &g_pVideoState->img_convert_ctx , pAVFrame ,
+						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , g_pVideoState->video_st->codec->pix_fmt ,
+						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , m_piexlformat );
+					 if ( lsize > 0 )
+					 {
+						 pSamp->SetActualDataLength( lsize );					 
+					 }
+				 }
+
+				 				 
+				 //清理frame
+				 av_free( pAVFrame);
+
+				 // The current time is the sample's start
+				 CRefTime rtStart = m_rtSampleTime;
+
+				 // Increment to find the finish time
+				 m_rtSampleTime += (LONG)m_iRepeatTime;
+				 pSamp->SetMediaTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+				 pSamp->SetSyncPoint(TRUE);
 			 }
-			 av_free( pAVFrame);
+			 
 		}
 	}
-	// The current time is the sample's start
-	CRefTime rtStart = m_rtSampleTime;
 
-	// Increment to find the finish time
-	m_rtSampleTime += (LONG)m_iRepeatTime;
-	pSamp->SetMediaTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
-	pSamp->SetSyncPoint(TRUE);
 	return NOERROR;
 }
 
@@ -241,10 +267,11 @@ HRESULT CVideoStreamPin::CheckMediaType(const CMediaType *pMediaType)
 	if (SubType == NULL)
 		return E_INVALIDARG;
 
-	if( IsEqualGUID(*SubType , WMMEDIASUBTYPE_I420 )
-		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB32 )
-		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB24 ) 
-		&& IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB565 )
+	if( !IsEqualGUID(*SubType , WMMEDIASUBTYPE_I420 )
+		&& !IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB32 )
+		&& !IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB24 )
+		&& !IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB565 )
+		&& !IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB555 )
 		)
 	{
 		return E_INVALIDARG;
@@ -256,7 +283,7 @@ HRESULT CVideoStreamPin::CheckMediaType(const CMediaType *pMediaType)
 	if(pvi == NULL)
 		return E_INVALIDARG;
 
-
+	updateFmtInfo(pMediaType);
 	return S_OK;
 }
 
@@ -284,23 +311,17 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 	{
 	case 0:
 		{
-			pvi->bmiHeader.biCompression = MAKEFOURCC( 'I', '4', '2', '0');
-			pvi->bmiHeader.biBitCount    = 16;
+			pvi->bmiHeader.biCompression = BI_RGB;
+			pvi->bmiHeader.biBitCount    = 32;			
 		}
 		break;
 	case 1:
 		{
 			pvi->bmiHeader.biCompression = BI_RGB;
-			pvi->bmiHeader.biBitCount    = 32;
-		}		
-		break;
-	case 2:
-		{
-			pvi->bmiHeader.biCompression = BI_RGB;
 			pvi->bmiHeader.biBitCount    = 24;
 		}		
 		break;
-	case 3:
+	case 2:
 		{
 			// 16 bit per pixel RGB565
 			pvi->bmiHeader.biCompression = BI_BITFIELDS;
@@ -311,6 +332,23 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 			pvi->TrueColorInfo.dwBitMasks[1] = 0x7e0;
 			pvi->TrueColorInfo.dwBitMasks[2] = 0x1f;*/
 		}
+		break;
+	case 3:
+		{
+			// 16 bit per pixel RGB555
+			pvi->bmiHeader.biCompression = BI_BITFIELDS;
+			pvi->bmiHeader.biBitCount    = 16;
+			for(int i = 0; i < 3; i++)
+				pvi->TrueColorInfo.dwBitMasks[i] = bits555[i];
+		}
+		break;
+	case 4:
+		{
+			pvi->bmiHeader.biCompression = MAKEFOURCC( 'I', '4', '2', '0');
+			pvi->bmiHeader.biBitCount    = 16;
+		}
+		break;
+	default:
 		break;
 	
 	}
@@ -334,6 +372,7 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 	pMediaType->SetSubtype( &SubTypeGUID );
 	pMediaType->SetSampleSize( pvi->bmiHeader.biSizeImage );
 
+	updateFmtInfo(pMediaType);
 	return NOERROR;
 
 	/*
@@ -445,7 +484,8 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 {
 	m_pVideoPin = new CVideoStreamPin( phr , this );
 	m_pAudioPin = new CAudioStreamPin( phr , this );
-	initAVFrameLink( &m_pAVFrameLink );
+	initAVFrameLink( &m_pVideoFrameLink );
+	initAVFrameLink( &m_pAudioFrameLink );
 	g_pNetSourceFilter = this;
 	//m_pVideoPin->AddRef();
 	//m_pAudioPin->AddRef();
@@ -472,7 +512,8 @@ CNetSourceFilter::~CNetSourceFilter(void)
 	{
 		m_pAudioPin->Release();
 	}*/
-	destoryAVFrameLink( &m_pAVFrameLink );
+	destoryAVFrameLink( &m_pVideoFrameLink );
+	destoryAVFrameLink( &m_pAudioFrameLink );
 }
 
 CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)

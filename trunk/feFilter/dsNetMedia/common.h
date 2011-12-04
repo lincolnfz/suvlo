@@ -68,7 +68,7 @@ typedef struct _tagVideoState {
     //SDL_Thread *video_tid;
     //SDL_Thread *refresh_tid;
 	HANDLE video_tid;
-	HANDLE decode_audio_thread;
+	HANDLE audio_tid;
     AVInputFormat *iformat;
     int no_background;
     int abort_request;

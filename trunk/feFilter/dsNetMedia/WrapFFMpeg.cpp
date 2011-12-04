@@ -676,7 +676,10 @@ static int get_video_frame(VideoState *is, AVFrame *frame, int64_t *pts, AVPacke
 unsigned int __stdcall decode_audio_thread( void* arg )
 {
 	VideoState *is = (VideoState*)arg;
-
+	AVFrameLink *pAudioLink = g_pNetSourceFilter->getAudioFrameLink();
+	/*for (;;)
+	{
+	}*/
 
 	return 0;
 }
@@ -833,7 +836,9 @@ static int stream_component_open(VideoState *is, int stream_index)
 
         memset(&is->audio_pkt, 0, sizeof(is->audio_pkt));
         packet_queue_init(&is->audioq);
-
+		unsigned int tid;
+		is->audio_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_audio_thread , is , 0 , &tid );
+		CloseHandle ( is->audio_tid );
        // SDL_PauseAudio(0);
         break;
     case AVMEDIA_TYPE_VIDEO:
@@ -844,6 +849,7 @@ static int stream_component_open(VideoState *is, int stream_index)
        // is->video_tid = SDL_CreateThread(video_thread, is);
 		unsigned int tid;
 		is->video_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_video_thread , is , 0 , &tid );
+		CloseHandle(is->video_tid);
         break;
     case AVMEDIA_TYPE_SUBTITLE:
         is->subtitle_stream = stream_index;
@@ -1180,7 +1186,7 @@ unsigned __stdcall readThread( void* arg )
 
 	/* open the streams */
 	if (st_index[AVMEDIA_TYPE_AUDIO] >= 0) {
-		//stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO]);
+		stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO]);
 	}
 
 	ret=-1;
@@ -1195,7 +1201,7 @@ unsigned __stdcall readThread( void* arg )
 	*/
 
 	if (st_index[AVMEDIA_TYPE_SUBTITLE] >= 0) {
-		//stream_component_open(is, st_index[AVMEDIA_TYPE_SUBTITLE]);
+		stream_component_open(is, st_index[AVMEDIA_TYPE_SUBTITLE]);
 	}
 
 	if (is->video_stream < 0 && is->audio_stream < 0) {

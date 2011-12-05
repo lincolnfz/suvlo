@@ -677,9 +677,11 @@ unsigned int __stdcall decode_audio_thread( void* arg )
 {
 	VideoState *is = (VideoState*)arg;
 	AVFrameLink *pAudioLink = g_pNetSourceFilter->getAudioFrameLink();
-	/*for (;;)
+	for (;;)
 	{
-	}*/
+		packet_queue_get(is->audioq , , 1 );
+	}
+	
 
 	return 0;
 }
@@ -1263,11 +1265,11 @@ unsigned __stdcall readThread( void* arg )
 			(double)(start_time != AV_NOPTS_VALUE ? start_time : 0)/1000000
 			<= ((double)duration/1000000);
 		if (pkt->stream_index == is->audio_stream && pkt_in_play_range) {
-			//packet_queue_put(&is->audioq, pkt);
+			packet_queue_put(&is->audioq, pkt);
 		} else if (pkt->stream_index == is->video_stream && pkt_in_play_range) {
 			packet_queue_put(&is->videoq, pkt);
 		} else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
-			//packet_queue_put(&is->subtitleq, pkt);
+			packet_queue_put(&is->subtitleq, pkt);
 		} else {
 			av_free_packet(pkt);
 		}

@@ -670,19 +670,44 @@ static int get_video_frame(VideoState *is, AVFrame *frame, int64_t *pts, AVPacke
 	return 0;
 }
 
+//解码音频数据
+static int decode_audio_frame( VideoState *is , AudioData *outdata , AVPacket *pkt ){
+	int ret = 0;
+	if ( pkt->data == flush_pkt.data )
+	{
+		//遇到结束的数据包
+		return 0;
+	}
+	ret = avcodec_decode_audio3( is->audio_st->codec , (int16_t *)(outdata->audio_buf) , &(outdata->data_size) , pkt );
+	return ret;
+}
+
 /**
 解码音频的线程
 */
 unsigned int __stdcall decode_audio_thread( void* arg )
 {
 	VideoState *is = (VideoState*)arg;
-	AVFrameLink *pAudioLink = g_pNetSourceFilter->getAudioFrameLink();
+	//AVFrameLink *pAudioLink = g_pNetSourceFilter->getAudioFrameLink();
+	DataLink<AudioData> *pAudioLink = g_pNetSourceFilter->getAudioDataLink();
 	for (;;)
 	{
-		packet_queue_get(is->audioq , , 1 );
+		AVPacket pkt;
+		packet_queue_get( &is->audioq , &pkt , 1 );
+		DataNode<AudioData> *pDataNode = (DataNode<AudioData>*)malloc(sizeof(DataNode<AudioData>));
+		pDataNode->pNext = NULL;
+		int ret = decode_audio_frame( is , &(pDataNode->pData) , &pkt );
+		av_free_packet(&pkt);
+		if ( ret < 0 )
+		{
+			free( pDataNode );
+			goto end;
+		}
+		putDataLink( pAudioLink , pDataNode );
+		
 	}
 	
-
+end:
 	return 0;
 }
 
@@ -718,7 +743,10 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 
 		//ret = queue_picture(is, frame, pts, pos);
 		//写到directshow的内存中
-		putAVFrameLink( pAVFrameLink , frame );
+		AVFrameNode *newNode = (AVFrameNode*)malloc( sizeof(AVFrameNode) ) ;
+		newNode->avframe = frame;
+		newNode->next = NULL;
+		putAVFrameLink( pAVFrameLink , newNode );
 
 		//if (ret < 0)
 		//	goto the_end;
@@ -824,41 +852,47 @@ static int stream_component_open(VideoState *is, int stream_index)
     ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
     switch(avctx->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-        is->audio_stream = stream_index;
-        is->audio_st = ic->streams[stream_index];
-        is->audio_buf_size = 0;
-        is->audio_buf_index = 0;
+        {
+			is->audio_stream = stream_index;
+			is->audio_st = ic->streams[stream_index];
+			is->audio_buf_size = 0;
+			is->audio_buf_index = 0;
 
-        /* init averaging filter */
-        is->audio_diff_avg_coef = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
-        is->audio_diff_avg_count = 0;
-        /* since we do not have a precise anough audio fifo fullness,
-           we correct audio sync only if larger than this threshold */
-        //is->audio_diff_threshold = 2.0 * SDL_AUDIO_BUFFER_SIZE / wanted_spec.freq;
+			/* init averaging filter */
+			is->audio_diff_avg_coef = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
+			is->audio_diff_avg_count = 0;
+			/* since we do not have a precise anough audio fifo fullness,
+			   we correct audio sync only if larger than this threshold */
+			//is->audio_diff_threshold = 2.0 * SDL_AUDIO_BUFFER_SIZE / wanted_spec.freq;
 
-        memset(&is->audio_pkt, 0, sizeof(is->audio_pkt));
-        packet_queue_init(&is->audioq);
-		unsigned int tid;
-		is->audio_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_audio_thread , is , 0 , &tid );
-		CloseHandle ( is->audio_tid );
+			memset(&is->audio_pkt, 0, sizeof(is->audio_pkt));
+			packet_queue_init(&is->audioq);
+			unsigned int tid;
+			is->audio_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_audio_thread , is , 0 , &tid );
+			CloseHandle ( is->audio_tid );
+		}
        // SDL_PauseAudio(0);
         break;
     case AVMEDIA_TYPE_VIDEO:
-        is->video_stream = stream_index;
-        is->video_st = ic->streams[stream_index];
+		{
+			is->video_stream = stream_index;
+			is->video_st = ic->streams[stream_index];
 
-        packet_queue_init(&is->videoq);
-       // is->video_tid = SDL_CreateThread(video_thread, is);
-		unsigned int tid;
-		is->video_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_video_thread , is , 0 , &tid );
-		CloseHandle(is->video_tid);
+			packet_queue_init(&is->videoq);
+		   // is->video_tid = SDL_CreateThread(video_thread, is);
+			unsigned int tid;
+			is->video_tid = (HANDLE)_beginthreadex( NULL , 0 , decode_video_thread , is , 0 , &tid );
+			CloseHandle(is->video_tid);
+		}
         break;
     case AVMEDIA_TYPE_SUBTITLE:
-        is->subtitle_stream = stream_index;
-        is->subtitle_st = ic->streams[stream_index];
-        packet_queue_init(&is->subtitleq);
+		{
+			is->subtitle_stream = stream_index;
+			is->subtitle_st = ic->streams[stream_index];
+			packet_queue_init(&is->subtitleq);
 
-       // is->subtitle_tid = SDL_CreateThread(subtitle_thread, is);
+		   // is->subtitle_tid = SDL_CreateThread(subtitle_thread, is);
+		}
         break;
     default:
         break;
@@ -1297,7 +1331,7 @@ fail:
 void CWrapFFMpeg::notify_new_launch( )
 {
 	char file[] = "femem://play.mem";
-	flush_buf();
+	flush_buf();	
 	av_init_packet(&flush_pkt);
 	flush_pkt.data= (uint8_t*)"FLUSH";
 	m_pVideoState = (VideoState*)av_mallocz(sizeof(VideoState));

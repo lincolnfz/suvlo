@@ -86,12 +86,13 @@ public:
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv);
 	
 	AVFrameLink *getVideoFrameLink(){ return m_pVideoFrameLink;}
-	AVFrameLink *getAudioFrameLink(){return m_pAudioFrameLink;}
+	DataLink<AudioData> *getAudioDataLink(){return m_pAudioDataLink;}
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
 	HANDLE m_hAlive_pack_event;
 	AVFrameLink *m_pVideoFrameLink;
-	AVFrameLink *m_pAudioFrameLink;
+	//AVFrameLink *m_pAudioFrameLink;
+	DataLink<AudioData> *m_pAudioDataLink;
 };
 

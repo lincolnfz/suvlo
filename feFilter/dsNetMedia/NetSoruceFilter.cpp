@@ -491,7 +491,7 @@ HRESULT CAudioStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOC
 	CheckPointer(pAlloc, E_POINTER);
 	CheckPointer(ppropInputRequest, E_POINTER);
 	m_mt.Format();
-	
+	//m_nSpaceTime   =   m_waveFormat.nChannels*m_waveFormat.wBitsPerSample*m_waveFormat.nAvgBytesPerSec*24   /   8   /   1000; 
 
 	return S_OK;
 }
@@ -500,6 +500,26 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 {
 	CAutoLock cAutoLock(m_pFilter->pStateLock());
 	CheckPointer(pMediaType, E_POINTER);
+	WAVEFORMATEX *pWaveFmt = (WAVEFORMATEX*)pMediaType->AllocFormatBuffer( sizeof(WAVEFORMATEX) );
+
+	if(NULL == pWaveFmt)
+		return(E_OUTOFMEMORY);
+
+	ZeroMemory( pWaveFmt , sizeof(WAVEFORMATEX) );
+	pWaveFmt->cbSize = 0 /*sizeof(WAVEFORMATEX)*/;
+	pWaveFmt->wFormatTag = WAVE_FORMAT_PCM;
+	//todo 添加详细的参数
+	//pWaveFmt->nChannels = ;
+	//pWaveFmt->wBitsPerSample = ;
+	//pWaveFmt->nSamplesPerSec = ;
+
+	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
+	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
+
+	pMediaType->SetType(&MEDIATYPE_Audio);
+	pMediaType->SetFormatType(&FORMAT_WaveFormatEx);
+	pMediaType->SetSubtype( &MEDIASUBTYPE_PCM /*MEDIASUBTYPE_WAVE*/ );
+	pMediaType->SetTemporalCompression(FALSE);
 
 	return S_OK;
 }

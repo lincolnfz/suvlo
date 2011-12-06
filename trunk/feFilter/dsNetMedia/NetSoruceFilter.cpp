@@ -191,7 +191,9 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		AVFrameLink *pAVFrameLink = pNetSourceFilter->getVideoFrameLink();
 		if ( pAVFrameLink )
 		{
-			 AVFrame *pAVFrame = getAVFrameLink( pAVFrameLink , 1 );
+			AVFrameNode *pAVFrameNode = getAVFrameLink( pAVFrameLink , 1 );
+			 AVFrame *pAVFrame = pAVFrameNode->avframe;
+			 free( pAVFrameNode );
 			 if ( pAVFrame )
 			 {
 				 if ( m_bYUV  )
@@ -508,7 +510,8 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 	m_pVideoPin = new CVideoStreamPin( phr , this );
 	m_pAudioPin = new CAudioStreamPin( phr , this );
 	initAVFrameLink( &m_pVideoFrameLink );
-	initAVFrameLink( &m_pAudioFrameLink );
+	//initAVFrameLink( &m_pAudioFrameLink );
+	initDataLink( &m_pAudioDataLink );
 	g_pNetSourceFilter = this;
 	//m_pVideoPin->AddRef();
 	//m_pAudioPin->AddRef();
@@ -536,7 +539,8 @@ CNetSourceFilter::~CNetSourceFilter(void)
 		m_pAudioPin->Release();
 	}*/
 	destoryAVFrameLink( &m_pVideoFrameLink );
-	destoryAVFrameLink( &m_pAudioFrameLink );
+	//destoryAVFrameLink( &m_pAudioFrameLink );
+	destoryDataLink( &m_pAudioDataLink );
 }
 
 CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)

@@ -176,7 +176,6 @@ typedef struct _tagVideoState {
 } VideoState;
 
 typedef struct _tagAVFrameNode{
-	VideoState *is;
 	AVFrame *avframe;
 	struct _tagAVFrameNode *next;
 }AVFrameNode;
@@ -191,9 +190,9 @@ typedef struct _tagAVFrameLink{
 
 int initAVFrameLink( AVFrameLink **avframelink );
 
-int putAVFrameLink( AVFrameLink *avframelink , AVFrame* avframe);
+int putAVFrameLink( AVFrameLink *avframelink , AVFrameNode *newNode);
 
-AVFrame* getAVFrameLink( AVFrameLink *avframelink , int block );
+AVFrameNode* getAVFrameLink( AVFrameLink *avframelink , int block );
 
 int flushAVFrameLink( AVFrameLink *avframelink );
 
@@ -210,6 +209,122 @@ public:
 private:
 	void*& m_Mutex;
 };
+
+typedef struct _tagAudioData{
+	DECLARE_ALIGNED(16,uint8_t,audio_buf)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
+	int data_size;
+}AudioData;
+
+template<class T>
+struct DataNode
+{
+	T pData;
+	DataNode *pNext;
+};
+
+template<class T>
+struct DataLink 
+{
+	DataNode<T> *pHead , *pTail;	
+	void *hMutex;
+	void *hEvent;
+	int nb_size;
+};
+
+template<class T>
+int initDataLink( DataLink<T> **ppDataLink )
+{
+	*ppDataLink = (DataLink<T>*)malloc( sizeof(DataLink<T>) );
+	(*ppDataLink)->nb_size = 0;
+	(*ppDataLink)->pHead = NULL;
+	(*ppDataLink)->pTail = NULL;
+	(*ppDataLink)->hEvent = CreateEvent( NULL , FALSE , FALSE , NULL );
+	(*ppDataLink)->hMutex = CreateMutex( NULL , FALSE , NULL );
+	return 0;
+}
+
+template<class T>
+int putDataLink( DataLink<T> *pDataLink , DataNode<T> *pDatanode )
+{
+	CFeLockMutex( pDataLink->hMutex );
+	if ( pDataLink->pHead == NULL )
+	{
+		pDataLink->pHead = pDatanode;
+	}
+	if ( pDataLink->pTail == NULL )
+	{
+		pDataLink->pTail = pDatanode;
+	}
+	else
+	{
+		pDataLink->pTail->pNext = pDatanode;
+		pDataLink->pTail = pDatanode;
+	}
+	++(pDataLink->nb_size);
+	SetEvent( pDataLink->hEvent );
+	return 0;
+}
+
+template<class T>
+DataNode<T> *getDataNode( DataLink<T> *pDataLink , int block )
+{
+	DataNode<T> *pNode = NULL;
+	WaitForSingleObject( pDataLink->hMutex , INFINITE );
+	for ( ;; )
+	{
+		if( pDataLink->pHead )
+		{
+			pNode = pDataLink->pHead;
+			pDataLink->pHead = pDataLink->pHead->pNext;
+			--(pDataLink->nb_size);
+			if ( pNode == pDataLink->pTail )
+			{
+				pDataLink->pTail = NULL;
+			}
+		}
+		else if ( !block )
+		{
+			break;
+		}
+		else
+		{
+			ReleaseMutex( pDataLink->hMutex );
+			WaitForSingleObject( pDataLink->hEvent , INFINITE );
+			WaitForSingleObject( pDataLink->hMutex , INFINITE );
+		}
+	}
+	ReleaseMutex( pDataLink->hMutex );
+	return pNode;
+}
+
+template<class T>
+int flushDataLink( DataLink<T> *pDataLink )
+{
+	CFeLockMutex( pDataLink->hMutex );
+	DataNode<T> *pVisit = NULL;
+	while( pDataLink->pHead )
+	{
+		pVisit = pDataLink->pHead;
+		pDataLink->pHead = pDataLink->pHead->pNext;
+		free( pVisit );
+		--(pDataLink->nb_size);
+	}
+	pDataLink->pTail = NULL;
+	return 0;
+}
+
+template<class T>
+int destoryDataLink( DataLink<T> **ppDataLink )
+{
+	flushDataLink(*ppDataLink);
+	CloseHandle( (*pDataLink)->hEvent );
+	CloseHandle( (*pDataLink)->hMutex );
+	free( *ppDataLink );
+	*pDataLink = NULL;
+	return 0;
+}
+
+
 
 // {7CCDB408-C5CA-447B-A34B-E1106F0D0119}
 DEFINE_GUID( CLSID_NetMediaSource , 

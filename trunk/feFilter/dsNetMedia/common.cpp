@@ -11,12 +11,9 @@ int initAVFrameLink( AVFrameLink **avframelink )
 	return 0;
 }
 
- int putAVFrameLink( AVFrameLink *avframelink , AVFrame* avframe)
+ int putAVFrameLink( AVFrameLink *avframelink , AVFrameNode *newNode)
 {
 	CFeLockMutex( avframelink->hMutex );
-	AVFrameNode *newNode = (AVFrameNode*)malloc( sizeof(AVFrameNode) ) ;
-	newNode->avframe = avframe;
-	newNode->next = NULL;
 	if ( avframelink->nodehead == NULL )
 	{
 		avframelink->nodehead = newNode;
@@ -35,9 +32,9 @@ int initAVFrameLink( AVFrameLink **avframelink )
 	return 0;
 }
 
-AVFrame* getAVFrameLink( AVFrameLink *avframelink , int block )
+AVFrameNode* getAVFrameLink( AVFrameLink *avframelink , int block )
 {
-	AVFrame* pNode = NULL;
+	//AVFrameNode* pNode = NULL;
 	AVFrameNode* pAVFrameNode = NULL;
 	WaitForSingleObject( avframelink->hMutex , INFINITE );
 	for (;;)
@@ -45,14 +42,14 @@ AVFrame* getAVFrameLink( AVFrameLink *avframelink , int block )
 		if ( avframelink->nodehead )
 		{
 			pAVFrameNode = avframelink->nodehead;
-			pNode = pAVFrameNode->avframe;
+			//pNode = pAVFrameNode->avframe;
 			avframelink->nodehead = avframelink->nodehead->next;
 			--(avframelink->nb_size);
 			if ( 0 == avframelink->nb_size )
 			{
 				avframelink->nodelast = NULL;
 			}
-			free( pAVFrameNode );
+			//free( pAVFrameNode );
 			break;
 		}else if ( !block )
 		{
@@ -64,7 +61,7 @@ AVFrame* getAVFrameLink( AVFrameLink *avframelink , int block )
 		}
 	}
 	ReleaseMutex( avframelink->hMutex );
-	return pNode;
+	return pAVFrameNode;
 }
 
 int flushAVFrameLink( AVFrameLink *avframelink )

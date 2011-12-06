@@ -202,7 +202,7 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , m_piexlformat );
 					 if ( lsize > 0 )
 					 {
-						 pSamp->SetActualDataLength( lsize );					 
+						 pSamp->SetActualDataLength( lsize );
 					 }
 				 }
 				 else
@@ -213,7 +213,7 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 						 g_pVideoState->video_st->codec->width , g_pVideoState->video_st->codec->height , m_piexlformat );
 					 if ( lsize > 0 )
 					 {
-						 pSamp->SetActualDataLength( lsize );					 
+						 pSamp->SetActualDataLength( lsize );
 					 }
 				 }
 

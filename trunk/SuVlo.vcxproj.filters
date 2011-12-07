@@ -22,9 +22,6 @@
     <Filter Include="bkwin\help">
       <UniqueIdentifier>{5163926a-2ead-4ff8-aff9-2365fb0ebef8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="libmms">
-      <UniqueIdentifier>{79ffa9c6-d585-4f36-b821-3bf0317ad7a7}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -153,28 +150,7 @@
     <ClInclude Include="PlayWnd.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\libmms\mms.h">
-      <Filter>libmms</Filter>
-    </ClInclude>
-    <ClInclude Include="include\libmms\mms_config.h">
-      <Filter>libmms</Filter>
-    </ClInclude>
-    <ClInclude Include="include\libmms\mmsh.h">
-      <Filter>libmms</Filter>
-    </ClInclude>
-    <ClInclude Include="include\libmms\mmsio.h">
-      <Filter>libmms</Filter>
-    </ClInclude>
-    <ClInclude Include="include\libmms\mmsx.h">
-      <Filter>libmms</Filter>
-    </ClInclude>
-    <ClInclude Include="WrapFFMpeg.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="MultiControl.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Wrapmms.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

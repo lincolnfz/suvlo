@@ -5,7 +5,7 @@
 #include <limits.h>
 #include "common.h"
 
-#define BUF_SIZE 32768
+//#define BUF_SIZE 32768
 #define MEM_BUF_SIZE 32768
 #define CYCLE_BUF_SIZE 131072
 

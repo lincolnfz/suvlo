@@ -281,6 +281,7 @@ DataNode<T> *getDataNode( DataLink<T> *pDataLink , int block )
 			{
 				pDataLink->pTail = NULL;
 			}
+			break;
 		}
 		else if ( !block )
 		{
@@ -317,10 +318,10 @@ template<class T>
 int destoryDataLink( DataLink<T> **ppDataLink )
 {
 	flushDataLink(*ppDataLink);
-	CloseHandle( (*pDataLink)->hEvent );
-	CloseHandle( (*pDataLink)->hMutex );
+	CloseHandle( (*ppDataLink)->hEvent );
+	CloseHandle( (*ppDataLink)->hMutex );
 	free( *ppDataLink );
-	*pDataLink = NULL;
+	*ppDataLink = NULL;
 	return 0;
 }
 

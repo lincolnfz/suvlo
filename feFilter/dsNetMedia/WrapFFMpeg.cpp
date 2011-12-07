@@ -695,6 +695,8 @@ unsigned int __stdcall decode_audio_thread( void* arg )
 		AVPacket pkt;
 		packet_queue_get( &is->audioq , &pkt , 1 );
 		DataNode<AudioData> *pDataNode = (DataNode<AudioData>*)malloc(sizeof(DataNode<AudioData>));
+		memset( pDataNode , 0 , sizeof(DataNode<AudioData>) );
+		pDataNode->pData.data_size = sizeof( pDataNode->pData.audio_buf );
 		pDataNode->pNext = NULL;
 		int ret = decode_audio_frame( is , &(pDataNode->pData) , &pkt );
 		av_free_packet(&pkt);
@@ -997,7 +999,7 @@ int initcodec( char* buf, int len , AVFormatContext** pfCtx )
 	probedata.filename = NULL;
 	AVInputFormat* pInFormat = av_probe_input_format( &probedata , AVFMT_NOFILE );
 
-	unsigned char* pbbuf = (unsigned char*)av_malloc(BUF_SIZE);
+	unsigned char* pbbuf = (unsigned char*)av_malloc(MEM_BUF_SIZE);
 	AVFormatContext* pFormatCtx = avformat_alloc_context();
 	*pfCtx = pFormatCtx;
 	pFormatCtx->iformat = pInFormat; //

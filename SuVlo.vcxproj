@@ -112,11 +112,6 @@
     <ClInclude Include="bkuilib\wtlhelper\wh3statecheckimglst.h" />
     <ClInclude Include="bkuilib\wtlhelper\whthreadnotify.h" />
     <ClInclude Include="bkuilib\wtlhelper\whwindow.h" />
-    <ClInclude Include="include\libmms\mms.h" />
-    <ClInclude Include="include\libmms\mmsh.h" />
-    <ClInclude Include="include\libmms\mmsio.h" />
-    <ClInclude Include="include\libmms\mmsx.h" />
-    <ClInclude Include="include\libmms\mms_config.h" />
     <ClInclude Include="MainDlg.h" />
     <ClInclude Include="MultiControl.h" />
     <ClInclude Include="PlayWnd.h" />
@@ -127,8 +122,6 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SuVlo.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="WrapFFMpeg.h" />
-    <ClInclude Include="Wrapmms.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MainDlg.cpp" />

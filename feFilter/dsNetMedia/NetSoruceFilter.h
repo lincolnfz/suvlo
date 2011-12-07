@@ -87,6 +87,7 @@ public:
 	
 	AVFrameLink *getVideoFrameLink(){ return m_pVideoFrameLink;}
 	DataLink<AudioData> *getAudioDataLink(){return m_pAudioDataLink;}
+	WAVEFORMATEX *getWaveProp(){ return &m_waveProp; }
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
@@ -94,5 +95,6 @@ protected:
 	AVFrameLink *m_pVideoFrameLink;
 	//AVFrameLink *m_pAudioFrameLink;
 	DataLink<AudioData> *m_pAudioDataLink;
+	WAVEFORMATEX m_waveProp;
 };
 

@@ -6,7 +6,8 @@
 //滤波器名称
 WCHAR filterNam[][20]={
 	L"dsNetMedia",
-	L"ViderRender"
+	L"ViderRender",
+	L"AudioRender"
 };
 
 CNetSourceFilter *g_pNetSourceFilter = NULL;
@@ -481,6 +482,18 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 	CheckPointer(pSamp, E_POINTER);
 	pSamp->GetPointer(&pData);
 	cbData = pSamp->GetSize();
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+	if ( pNetSourceFilter )
+	{
+		DataLink<AudioData> *pDataLink = pNetSourceFilter->getAudioDataLink();
+		DataNode<AudioData> *pNode = getDataNode( pDataLink , 1 );
+		if ( pNode )
+		{
+			memcpy( pData , pNode->pData.audio_buf , pNode->pData.data_size );						
+			pSamp->SetActualDataLength( pNode->pData.data_size );
+			free( pNode );
+		}
+	}
 	return S_OK;
 }
 
@@ -491,7 +504,33 @@ HRESULT CAudioStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOC
 	CheckPointer(pAlloc, E_POINTER);
 	CheckPointer(ppropInputRequest, E_POINTER);
 	m_mt.Format();
-	//m_nSpaceTime   =   m_waveFormat.nChannels*m_waveFormat.wBitsPerSample*m_waveFormat.nAvgBytesPerSec*24   /   8   /   1000; 
+	//m_nSpaceTime   =   m_waveFormat.nChannels*m_waveFormat.wBitsPerSample*m_waveFormat.nAvgBytesPerSec*24   /   8   /   1000;
+
+	// Ensure a minimum number of buffers
+	ppropInputRequest->cBuffers = 4;
+	ppropInputRequest->cbBuffer = AVCODEC_MAX_AUDIO_FRAME_SIZE * 4;
+	ASSERT( ppropInputRequest->cbBuffer );
+
+	// Ask the allocator to reserve us some sample memory. NOTE: the function
+	// can succeed (return NOERROR) but still not have allocated the
+	// memory that we requested, so we must check we got whatever we wanted.
+	ALLOCATOR_PROPERTIES Actual;
+	hr = pAlloc->SetProperties(ppropInputRequest, &Actual);
+	if (FAILED(hr)) 
+	{
+		return hr;
+	}
+
+	// Is this allocator unsuitable?
+	if (Actual.cbBuffer < ppropInputRequest->cbBuffer) 
+	{
+		return E_FAIL;
+	}
+
+	// Make sure that we have only 1 buffer (we erase the ball in the
+	// old buffer to save having to zero a 200k+ buffer every time
+	// we draw a frame)
+	//ASSERT(Actual.cBuffers == 1);
 
 	return S_OK;
 }
@@ -501,6 +540,7 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	CAutoLock cAutoLock(m_pFilter->pStateLock());
 	CheckPointer(pMediaType, E_POINTER);
 	WAVEFORMATEX *pWaveFmt = (WAVEFORMATEX*)pMediaType->AllocFormatBuffer( sizeof(WAVEFORMATEX) );
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 
 	if(NULL == pWaveFmt)
 		return(E_OUTOFMEMORY);
@@ -509,9 +549,9 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	pWaveFmt->cbSize = 0 /*sizeof(WAVEFORMATEX)*/;
 	pWaveFmt->wFormatTag = WAVE_FORMAT_PCM;
 	//todo 添加详细的参数
-	//pWaveFmt->nChannels = ;
-	//pWaveFmt->wBitsPerSample = ;
-	//pWaveFmt->nSamplesPerSec = ;
+	pWaveFmt->nChannels = 2; //pNetSourceFilter->getWaveProp()->nChannels;   //共多少声道
+	pWaveFmt->wBitsPerSample = 16; //pNetSourceFilter->getWaveProp()->wBitsPerSample; //每个样本多少位
+	pWaveFmt->nSamplesPerSec = 22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
 
 	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
 	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
@@ -520,6 +560,7 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	pMediaType->SetFormatType(&FORMAT_WaveFormatEx);
 	pMediaType->SetSubtype( &MEDIASUBTYPE_PCM /*MEDIASUBTYPE_WAVE*/ );
 	pMediaType->SetTemporalCompression(FALSE);
+	pMediaType->SetSampleSize( AVCODEC_MAX_AUDIO_FRAME_SIZE * 4 );
 
 	return S_OK;
 }
@@ -542,7 +583,6 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 		else
 			*phr = S_OK;
 	}
-
 }
 
 
@@ -580,14 +620,19 @@ CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *ph
 
 STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 {
-	
+
+	/************************************************************************/
+	/* 开始联接filter                                                        */
+	/************************************************************************/
 	IGraphBuilder *pGraphBuilder = NULL;
 	IFilterGraph *pFilterGraph = GetFilterGraph();
+	BOOL bConnect = FALSE;
 	HRESULT hr = S_OK;
 	if ( pFilterGraph )
 	{
 		if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IGraphBuilder , (void **)&pGraphBuilder ) ) )
 		{
+			//联接videopin
 			IBaseFilter* pVideoReaderFilter = NULL;
 			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pVideoReaderFilter ) ) )
 			{
@@ -597,13 +642,7 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 					hr = m_pVideoPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
 					if ( SUCCEEDED(hr) )
 					{
-						//联接成功
-						IMediaFilter *pIMediaFilter = NULL;
-						if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
-						{
-							pIMediaFilter->Run(0); //开始播放视频
-							pIMediaFilter->Release();
-						}
+						bConnect = TRUE;						
 						
 						/*this->Run(0);
 						this->Stop();
@@ -616,10 +655,46 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 				}
 				pVideoReaderFilter->Release();
 			}
+			//联接videopin完成
+
+			//联接audiopin
+			IBaseFilter* pAudioRenderFilter = NULL;
+			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[2] , &pAudioRenderFilter ) ) )
+			{
+				IPin* pIPin = NULL;
+				if ( SUCCEEDED(GetUnconnectedPin( pAudioRenderFilter , PINDIR_INPUT , &pIPin )) )
+				{
+					hr = m_pAudioPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
+					if ( SUCCEEDED(hr) )
+					{
+						bConnect = TRUE;						
+						
+					}						
+					else if ( VFW_E_CANNOT_CONNECT == hr )
+					{
+						//无法找到中间的过渡的pin
+					}
+				}
+				pAudioRenderFilter->Release();
+			}
+			//联接audiopin完成
 			
+
+			if ( bConnect )
+			{
+				//联接成功
+				IMediaFilter *pIMediaFilter = NULL;
+				if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
+				{
+					pIMediaFilter->Run(0); //开始播放视频
+					pIMediaFilter->Release();
+				}
+			}
 			pGraphBuilder->Release();
 		}
 	}
+	//构造graph结束
+
 
 	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
 	char *lpurl = new char[size];
@@ -627,7 +702,7 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 	//播放远程视频
 	m_wrapmms.play( lpurl );
 	delete []lpurl;
-	
+
 	
 	return S_OK;
 }

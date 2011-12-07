@@ -4,7 +4,8 @@
 
 WCHAR filterNam[][20]={
 	L"dsNetMedia",
-	L"ViderRender"
+	L"ViderRender",
+	L"AudioRender"
 };
 
 CMainDlg* pMainDlg = NULL;
@@ -213,6 +214,14 @@ BOOL CMainDlg::Init()
 		m_pGraphBuilder->AddFilter( pVideoRenderFilter , filterNam[1] );
 		pVideoRenderFilter->Release();
 	}
+
+	IBaseFilter *pAudioRenderFilter = NULL;
+	if ( SUCCEEDED( CoCreateInstance( CLSID_AudioRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
+	{
+		m_pGraphBuilder->AddFilter( pAudioRenderFilter , filterNam[2] );
+		pAudioRenderFilter->Release();
+	}
+	 
 	
 	
 	return TRUE;

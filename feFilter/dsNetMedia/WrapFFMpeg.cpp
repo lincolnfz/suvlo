@@ -190,7 +190,7 @@ int CWrapFFMpeg::calc_remain_size()
 {
 	//EnterCriticalSection( &m_calcSection );
 	WaitForSingleObject( m_hOpMemLock , INFINITE );
-	int size=CYCLE_BUF_SIZE;
+	int size = CYCLE_BUF_SIZE;
 	if ( m_valid_head == m_valid_end )
 	{
 		size = CYCLE_BUF_SIZE;

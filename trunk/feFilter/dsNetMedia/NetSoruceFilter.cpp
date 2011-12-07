@@ -462,7 +462,11 @@ HRESULT CVideoStreamPin::OnThreadCreate(void)
 	return S_OK;
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
 //ÒôÆµ½Ó¿Ú
+
 CAudioStreamPin::CAudioStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Audio_Out")
 {

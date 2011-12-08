@@ -22,7 +22,7 @@ public:
 	HRESULT OnThreadCreate(void);
 
 	// Quality control notifications sent to us
-	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);	
 
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
@@ -85,14 +85,15 @@ public:
 
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv);
 	
-	AVFrameLink *getVideoFrameLink(){ return m_pVideoFrameLink;}
+	DataLink<VideoData> *getVideoFrameLink(){ return m_pVideoFrameLink;}
 	DataLink<AudioData> *getAudioDataLink(){return m_pAudioDataLink;}
 	WAVEFORMATEX *getWaveProp(){ return &m_waveProp; }
+	void NoitfyStart();
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
 	HANDLE m_hAlive_pack_event;
-	AVFrameLink *m_pVideoFrameLink;
+	DataLink<VideoData> *m_pVideoFrameLink;
 	//AVFrameLink *m_pAudioFrameLink;
 	DataLink<AudioData> *m_pAudioDataLink;
 	WAVEFORMATEX m_waveProp;

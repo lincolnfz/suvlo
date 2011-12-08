@@ -186,6 +186,8 @@ typedef struct _tagAVFrameLink{
 	int nb_size;
 	void *hMutex;
 	void *hEvent;
+	CRITICAL_SECTION cs;
+	
 }AVFrameLink;
 
 int initAVFrameLink( AVFrameLink **avframelink );
@@ -209,6 +211,24 @@ public:
 private:
 	void*& m_Mutex;
 };
+
+class CFeLockCriSec{
+public:
+	CFeLockCriSec( CRITICAL_SECTION& cs ):m_cs(cs){
+		EnterCriticalSection(&m_cs);
+	}
+	~CFeLockCriSec(){
+		LeaveCriticalSection(&m_cs);
+	}
+
+private:
+	CRITICAL_SECTION &m_cs;
+};
+
+typedef struct _tagVideoData{
+	AVFrame *avframe;
+	int64_t pts;
+}VideoData;
 
 typedef struct _tagAudioData{
 	DECLARE_ALIGNED(16,uint8_t,audio_buf)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];

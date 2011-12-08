@@ -428,4 +428,19 @@ void NukeUpstream(IGraphBuilder * inGraph, IBaseFilter * inFilter)
 	}
 }
 
+HRESULT GetRefTime( IFilterGraph* pIFilterGraph , REFERENCE_TIME* pref_time )
+{
+	if ( pIFilterGraph == NULL || pref_time == NULL )
+	{
+		return E_POINTER;
+	}
+	IReferenceClock *pIRefClock = NULL;
+	HRESULT hr = pIFilterGraph->QueryInterface( IID_IReferenceClock , (void**)&pIRefClock );
+	if ( FAILED(hr) )
+	{
+		return hr;
+	}
+	return pIRefClock->GetTime( pref_time );
+}
+
 /////////////////////////////////////////////////////////////////////////////

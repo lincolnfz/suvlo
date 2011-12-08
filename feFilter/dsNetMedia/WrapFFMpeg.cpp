@@ -722,7 +722,7 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 	int64_t pts_int = AV_NOPTS_VALUE, pos = -1;
 	double pts;
 	int ret;
-	AVFrameLink *pAVFrameLink = g_pNetSourceFilter->getVideoFrameLink();
+	DataLink<VideoData> *pAVFrameLink = g_pNetSourceFilter->getVideoFrameLink();
 
 	for (;;)
 	{
@@ -745,10 +745,13 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 
 		//ret = queue_picture(is, frame, pts, pos);
 		//写到directshow的内存中
-		AVFrameNode *newNode = (AVFrameNode*)malloc( sizeof(AVFrameNode) ) ;
-		newNode->avframe = frame;
-		newNode->next = NULL;
-		putAVFrameLink( pAVFrameLink , newNode );
+		DataNode<VideoData> *pNode =  (DataNode<VideoData>*)malloc( sizeof(DataNode<VideoData>) );
+		pNode->pData.avframe = frame;
+		pNode->pData.pts = pts_int;
+		pNode->pNext = NULL;
+
+		putDataLink( pAVFrameLink , pNode );
+		//putAVFrameLink( pAVFrameLink , newNode );
 
 		//if (ret < 0)
 		//	goto the_end;
@@ -1287,9 +1290,14 @@ unsigned __stdcall readThread( void* arg )
 		ret = av_read_frame( is->ic , pkt ); 
 		if (ret < 0) {
 			if (ret == AVERROR_EOF || url_feof(ic->pb))
-				eof=1;
+				{
+					eof=1; //必须为1
+					continue;
+			}
 			if (ic->pb && ic->pb->error)
-				break;
+				{
+					break;
+			}
 			//SDL_Delay(100); /* wait for user event */
 			continue;
 		}
@@ -1344,4 +1352,5 @@ void CWrapFFMpeg::notify_new_launch( )
 	av_strlcpy( is->filename, file, strlen(file) );
 	is->iformat = file_iformat;
 	_beginthreadex( NULL , 0 , readThread , m_pVideoState , 0 , 0 );
+	g_pNetSourceFilter->NoitfyStart();
 }

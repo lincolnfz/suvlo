@@ -17,7 +17,7 @@ extern VideoState *g_pVideoState;
 #define DEFAULT_HEIGHT 160
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
-	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(20)
+	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(50)
 {
 	m_piexlformat = PIX_FMT_RGB32;
 	m_iPixelSize = 4;
@@ -189,11 +189,12 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 	if ( pNetSourceFilter )
 	{
-		AVFrameLink *pAVFrameLink = pNetSourceFilter->getVideoFrameLink();
+		DataLink<VideoData> *pAVFrameLink = pNetSourceFilter->getVideoFrameLink();
 		if ( pAVFrameLink )
 		{
-			AVFrameNode *pAVFrameNode = getAVFrameLink( pAVFrameLink , 1 );
-			 AVFrame *pAVFrame = pAVFrameNode->avframe;
+			DataNode<VideoData> *pAVFrameNode = getDataNode( pAVFrameLink , 1 );
+			 AVFrame *pAVFrame = pAVFrameNode->pData.avframe;
+			 int64_t pts = pAVFrameNode->pData.pts;
 			 free( pAVFrameNode );
 			 if ( pAVFrame )
 			 {
@@ -228,8 +229,9 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				 CRefTime rtStart = m_rtSampleTime;
 
 				 // Increment to find the finish time
-				 m_rtSampleTime += (LONG)m_iRepeatTime;
-				 pSamp->SetMediaTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+				 m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
+				 pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+				 
 				 pSamp->SetSyncPoint(TRUE);
 			 }
 			 
@@ -386,6 +388,8 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 	pvi->bmiHeader.biClrImportant = 0; //指定本图象中重要的颜色数，如果该值为零，则认为所有的颜色都是重要的。
 	pvi->bmiHeader.biClrUsed = 0; //调色板中实际使用的颜色数,这个值通常为0，表示使用biBitCount确定的全部颜色
 
+	pvi->AvgTimePerFrame = (REFERENCE_TIME)500000;
+
 	// Work out the GUID for the subtype from the header info.
 	const GUID SubTypeGUID = GetBitmapSubtype(&pvi->bmiHeader);
 
@@ -400,27 +404,6 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 
 	updateFmtInfo(pMediaType);
 	return NOERROR;
-
-	/*
-	VIDEOINFOHEADER   vih; 
-	memset(   &vih,   0,   sizeof(   vih   )   ); 
-	vih.bmiHeader.biCompression   =   BI_RGB; 
-	vih.bmiHeader.biBitCount         =   24; //每个像素的位数
-	vih.bmiHeader.biSize                   =   sizeof(BITMAPINFOHEADER);  //bitmapinfoheader结构体的长度
-	vih.bmiHeader.biWidth                 =   DEFAULT_WIDTH;//Your   size.x 
-	vih.bmiHeader.biHeight               =   DEFAULT_HEIGHT;//Your   size.y 
-	vih.bmiHeader.biPlanes               =   1;		//填为1
-	vih.bmiHeader.biSizeImage         =   GetBitmapSize(&vih.bmiHeader); //实际的图像数据占用的字节数
-	vih.bmiHeader.biClrUsed = 0; //调色板中实际使用的颜色数,这个值通常为0，表示使用biBitCount确定的全部颜色
-	vih.bmiHeader.biClrImportant   =   0; //指定本图象中重要的颜色数，如果该值为零，则认为所有的颜色都是重要的。
-
-	pMediaType-> SetType(&MEDIATYPE_Video); //Major Types
-	pMediaType-> SetSubtype(&MEDIASUBTYPE_RGB24); //sub type
-	pMediaType-> SetFormatType(&FORMAT_VideoInfo);  //formattype
-	pMediaType-> SetFormat( (BYTE*)&vih, sizeof( vih ) ); 
-	pMediaType-> SetSampleSize(vih.bmiHeader.biSizeImage);	
-	return S_OK;
-	*/
 }
 
 STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
@@ -428,14 +411,14 @@ STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 	// Adjust the repeat rate.
 	if(q.Proportion<=0)
 	{
-		m_iRepeatTime = 1000;        // We don't go slower than 1 per second
+		m_iRepeatTime = 50;        // We don't go slower than 1 per second
 	}
 	else
 	{
 		m_iRepeatTime = m_iRepeatTime*1000 / q.Proportion;
-		if(m_iRepeatTime>1000)
+		if(m_iRepeatTime>50)
 		{
-			m_iRepeatTime = 1000;    // We don't go slower than 1 per second
+			m_iRepeatTime = 50;    // We don't go slower than 1 per second
 		}
 		else if(m_iRepeatTime<10)
 		{
@@ -446,7 +429,7 @@ STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 	// skip forwards
 	if(q.Late > 0)
 		m_rtSampleTime += q.Late;
-
+	
 	return NOERROR;
 }
 
@@ -574,7 +557,7 @@ CNetSourceFilter::CNetSourceFilter(IUnknown *pUnk, HRESULT *phr)
 {
 	m_pVideoPin = new CVideoStreamPin( phr , this );
 	m_pAudioPin = new CAudioStreamPin( phr , this );
-	initAVFrameLink( &m_pVideoFrameLink );
+	initDataLink( &m_pVideoFrameLink );
 	//initAVFrameLink( &m_pAudioFrameLink );
 	initDataLink( &m_pAudioDataLink );
 	g_pNetSourceFilter = this;
@@ -602,7 +585,7 @@ CNetSourceFilter::~CNetSourceFilter(void)
 	{
 		m_pAudioPin->Release();
 	}*/
-	destoryAVFrameLink( &m_pVideoFrameLink );
+	destoryDataLink( &m_pVideoFrameLink );
 	//destoryAVFrameLink( &m_pAudioFrameLink );
 	destoryDataLink( &m_pAudioDataLink );
 }
@@ -625,6 +608,39 @@ CUnknown* __stdcall CNetSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *ph
 STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 {
 
+	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
+	char *lpurl = new char[size];
+	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
+	//播放远程视频
+	m_wrapmms.play( lpurl );
+	delete []lpurl;
+
+	
+	return S_OK;
+}
+
+STDMETHODIMP CNetSourceFilter::seek(ULONG64 utime)
+{
+	return S_OK;
+}
+
+
+STDMETHODIMP CNetSourceFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv)
+{
+	CheckPointer(ppv,E_POINTER);
+	if (  riid == IID_INetSource )
+	{
+		return GetInterface( (INetSource*)this , ppv );
+	}
+	else
+	{
+		return CSource::NonDelegatingQueryInterface( riid , ppv );
+	}
+	
+}
+
+void CNetSourceFilter::NoitfyStart()
+{
 	/************************************************************************/
 	/* 开始联接filter                                                        */
 	/************************************************************************/
@@ -643,7 +659,7 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 				IPin* pIPin = NULL;
 				if ( SUCCEEDED(GetUnconnectedPin( pVideoReaderFilter , PINDIR_INPUT , &pIPin )) )
 				{
-					hr = m_pVideoPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
+					hr = m_pVideoPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );				
 					if ( SUCCEEDED(hr) )
 					{
 						bConnect = TRUE;						
@@ -689,7 +705,13 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 				//联接成功
 				IMediaFilter *pIMediaFilter = NULL;
 				if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
-				{
+				{				
+					IReferenceClock *pIRefClock = NULL;
+					if ( SUCCEEDED( CoCreateInstance( CLSID_SystemClock , NULL , CLSCTX_INPROC_SERVER , IID_IReferenceClock , (LPVOID*)&pIRefClock ) ) )
+					{						
+						hr = pIMediaFilter->SetSyncSource( pIRefClock );
+						pIRefClock->Release();
+					}
 					pIMediaFilter->Run(0); //开始播放视频
 					pIMediaFilter->Release();
 				}
@@ -698,35 +720,4 @@ STDMETHODIMP CNetSourceFilter::play(LPCWSTR url)
 		}
 	}
 	//构造graph结束
-
-
-	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
-	char *lpurl = new char[size];
-	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
-	//播放远程视频
-	m_wrapmms.play( lpurl );
-	delete []lpurl;
-
-	
-	return S_OK;
-}
-
-STDMETHODIMP CNetSourceFilter::seek(ULONG64 utime)
-{
-	return S_OK;
-}
-
-
-STDMETHODIMP CNetSourceFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void ** ppv)
-{
-	CheckPointer(ppv,E_POINTER);
-	if (  riid == IID_INetSource )
-	{
-		return GetInterface( (INetSource*)this , ppv );
-	}
-	else
-	{
-		return CSource::NonDelegatingQueryInterface( riid , ppv );
-	}
-	
 }

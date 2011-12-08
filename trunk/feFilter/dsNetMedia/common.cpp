@@ -5,9 +5,10 @@ int initAVFrameLink( AVFrameLink **avframelink )
 	*avframelink = (AVFrameLink*)malloc( sizeof(AVFrameLink) );
 	(*avframelink)->hMutex = CreateMutex( NULL , FALSE , NULL );
 	(*avframelink)->hEvent = CreateEvent( NULL , FALSE , FALSE , NULL );
+	InitializeCriticalSection( &((*avframelink)->cs) );
 	(*avframelink)->nodehead = NULL;
 	(*avframelink)->nodelast = NULL;
-	(*avframelink)->nb_size = 0;
+	(*avframelink)->nb_size = 0;	
 	return 0;
 }
 
@@ -84,7 +85,8 @@ int destoryAVFrameLink( AVFrameLink **avframelink )
 	flushAVFrameLink( *avframelink );
 	CloseHandle( (*avframelink)->hMutex );
 	CloseHandle( (*avframelink)->hEvent );
+	DeleteCriticalSection( &((*avframelink)->cs) );
 	free(*avframelink);
-	*avframelink = NULL;
+	*avframelink = NULL;	
 	return 0;
 }

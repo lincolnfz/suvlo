@@ -71,4 +71,7 @@ void NukeDownstream(IGraphBuilder * inGraph, IBaseFilter * inFilter);
 // Tear down everything upstream of a given filter
 void NukeUpstream(IGraphBuilder * inGraph, IBaseFilter * inFilter);
 
+//得到filter时间
+HRESULT GetRefTime( IFilterGraph* , REFERENCE_TIME* );
+
 #endif

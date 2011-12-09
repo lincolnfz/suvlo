@@ -227,7 +227,7 @@ private:
 
 typedef struct _tagVideoData{
 	AVFrame *avframe;
-	int64_t pts;
+	double pts;
 }VideoData;
 
 typedef struct _tagAudioData{
@@ -266,7 +266,7 @@ int initDataLink( DataLink<T> **ppDataLink )
 template<class T>
 int putDataLink( DataLink<T> *pDataLink , DataNode<T> *pDatanode )
 {
-	CFeLockMutex( pDataLink->hMutex );
+	//CFeLockMutex( pDataLink->hMutex );
 	if ( pDataLink->pHead == NULL )
 	{
 		pDataLink->pHead = pDatanode;

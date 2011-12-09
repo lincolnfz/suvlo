@@ -742,12 +742,17 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 			is->frame_last_filter_delay = 0;
 
 		pts = pts_int*av_q2d(is->video_st->time_base);
+		if (pts < 0)
+		{
+			av_free(frame);
+			continue;
+		}
 
 		//ret = queue_picture(is, frame, pts, pos);
 		//写到directshow的内存中
 		DataNode<VideoData> *pNode =  (DataNode<VideoData>*)malloc( sizeof(DataNode<VideoData>) );
 		pNode->pData.avframe = frame;
-		pNode->pData.pts = pts_int;
+		pNode->pData.pts = pts;
 		pNode->pNext = NULL;
 
 		putDataLink( pAVFrameLink , pNode );
@@ -1250,6 +1255,8 @@ unsigned __stdcall readThread( void* arg )
 		goto fail;
 	}
 
+	long loop = 0;
+	int st = 0;
 	//下面是分析解码数据包
 	for( ;; )
 	{
@@ -1317,6 +1324,14 @@ unsigned __stdcall readThread( void* arg )
 		} else {
 			av_free_packet(pkt);
 		}
+
+		
+		++loop;
+		if ( loop == 1000 && st == 0 )
+		{
+			st = 1;
+			g_pNetSourceFilter->NoitfyStart();
+		}
 	}
 
 fail:	
@@ -1352,5 +1367,5 @@ void CWrapFFMpeg::notify_new_launch( )
 	av_strlcpy( is->filename, file, strlen(file) );
 	is->iformat = file_iformat;
 	_beginthreadex( NULL , 0 , readThread , m_pVideoState , 0 , 0 );
-	g_pNetSourceFilter->NoitfyStart();
+	//g_pNetSourceFilter->NoitfyStart();
 }

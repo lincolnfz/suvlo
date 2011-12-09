@@ -17,7 +17,7 @@ extern VideoState *g_pVideoState;
 #define DEFAULT_HEIGHT 160
 
 CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
-	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(50)
+	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Video_Out"),m_iDefaultRepeatTime(500000)
 {
 	m_piexlformat = PIX_FMT_RGB32;
 	m_iPixelSize = 4;
@@ -145,19 +145,19 @@ long CVideoStreamPin::generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *
 		if ( !ret && sws_scale( *ctx , pFrame->data , pFrame->linesize , 0 , heightSrc , pict.data , pict.linesize ) )
 		{
 			lsize = pict.linesize[0]*heightSrc;
-			memcpy(pDst , pict.data[0] , lsize );
+			CopyMemory(pDst , pict.data[0] , lsize );
 			pDst += lsize;
 			if ( pict.linesize[1] )
 			{
 				int tmplen = pict.linesize[1]*heightSrc;
-				memcpy(pDst , pict.data[1] , tmplen );
+				CopyMemory(pDst , pict.data[1] , tmplen );
 				pDst += tmplen;
 				lsize += tmplen;
 			}
 			if ( pict.linesize[2] )
 			{
 				int tmplen = pict.linesize[2]*heightSrc;
-				memcpy(pDst , pict.data[2] , tmplen );
+				CopyMemory(pDst , pict.data[2] , tmplen );
 				pDst += tmplen;
 				lsize += tmplen;
 			}
@@ -194,7 +194,7 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		{
 			DataNode<VideoData> *pAVFrameNode = getDataNode( pAVFrameLink , 1 );
 			 AVFrame *pAVFrame = pAVFrameNode->pData.avframe;
-			 int64_t pts = pAVFrameNode->pData.pts;
+			 double pts = pAVFrameNode->pData.pts;
 			 free( pAVFrameNode );
 			 if ( pAVFrame )
 			 {
@@ -231,6 +231,10 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				 // Increment to find the finish time
 				 m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
 				 pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+
+				 //REFERENCE_TIME rt = pts * UNITS;
+				 //REFERENCE_TIME rtend = rt;// + 50 * 10000;
+				 //pSamp->SetTime( &rt , &rtend );
 				 
 				 pSamp->SetSyncPoint(TRUE);
 			 }
@@ -408,23 +412,23 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 
 STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 {
-	// Adjust the repeat rate.
-	if(q.Proportion<=0)
-	{
-		m_iRepeatTime = 50;        // We don't go slower than 1 per second
-	}
-	else
-	{
-		m_iRepeatTime = m_iRepeatTime*1000 / q.Proportion;
-		if(m_iRepeatTime>50)
-		{
-			m_iRepeatTime = 50;    // We don't go slower than 1 per second
-		}
-		else if(m_iRepeatTime<10)
-		{
-			m_iRepeatTime = 10;      // We don't go faster than 100/sec
-		}
-	}
+	//// Adjust the repeat rate.
+	//if(q.Proportion<=0)
+	//{
+	//	m_iRepeatTime = 1000;        // We don't go slower than 1 per second
+	//}
+	//else
+	//{
+	//	m_iRepeatTime = m_iRepeatTime*1000 / q.Proportion;
+	//	if(m_iRepeatTime>1000)
+	//	{
+	//		m_iRepeatTime = 1000;    // We don't go slower than 1 per second
+	//	}
+	//	else if(m_iRepeatTime<10)
+	//	{
+	//		m_iRepeatTime = 10;      // We don't go faster than 100/sec
+	//	}
+	//}
 
 	// skip forwards
 	if(q.Late > 0)

@@ -671,7 +671,7 @@ static int get_video_frame(VideoState *is, AVFrame *frame, int64_t *pts, AVPacke
 }
 
 //解码音频数据
-static int decode_audio_frame( VideoState *is , AudioData *outdata , AVPacket *pkt ){
+static int get_audio_frame( VideoState *is , AudioData *outdata , AVPacket *pkt ){
 	int ret = 0;
 	if ( pkt->data == flush_pkt.data )
 	{
@@ -698,7 +698,7 @@ unsigned int __stdcall decode_audio_thread( void* arg )
 		memset( pDataNode , 0 , sizeof(DataNode<AudioData>) );
 		pDataNode->pData.data_size = sizeof( pDataNode->pData.audio_buf );
 		pDataNode->pNext = NULL;
-		int ret = decode_audio_frame( is , &(pDataNode->pData) , &pkt );
+		int ret = get_audio_frame( is , &(pDataNode->pData) , &pkt );
 		av_free_packet(&pkt);
 		if ( ret < 0 )
 		{
@@ -751,7 +751,11 @@ unsigned int __stdcall decode_video_thread( void* pArg )
 		//ret = queue_picture(is, frame, pts, pos);
 		//写到directshow的内存中
 		DataNode<VideoData> *pNode =  (DataNode<VideoData>*)malloc( sizeof(DataNode<VideoData>) );
-		pNode->pData.avframe = frame;
+		pNode->pData.ldatalen = generateRGBDate( pNode->pData.vdata , &(is->img_convert_ctx) ,frame , is->video_st->codec->width ,
+			 is->video_st->codec->height ,is->video_st->codec->pix_fmt , is->video_st->codec->width , 
+			 is->video_st->codec->height , PIX_FMT_RGB32 );
+		av_free(frame);
+		//pNode->pData.avframe = frame;
 		pNode->pData.pts = pts;
 		pNode->pNext = NULL;
 
@@ -1369,3 +1373,4 @@ void CWrapFFMpeg::notify_new_launch( )
 	_beginthreadex( NULL , 0 , readThread , m_pVideoState , 0 , 0 );
 	//g_pNetSourceFilter->NoitfyStart();
 }
+

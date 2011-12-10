@@ -26,7 +26,7 @@ CVideoStreamPin::CVideoStreamPin(HRESULT *phr, CSource *pFilter)
 
 CVideoStreamPin::~CVideoStreamPin()
 {
-
+	
 }
 
 void CVideoStreamPin::updateFmtInfo( const CMediaType * pmt)
@@ -193,7 +193,8 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		if ( pAVFrameLink )
 		{
 			DataNode<VideoData> *pAVFrameNode = getDataNode( pAVFrameLink , 1 );
-			 AVFrame *pAVFrame = pAVFrameNode->pData.avframe;
+			/*
+			AVFrame *pAVFrame = pAVFrameNode->pData.avframe;
 			 double pts = pAVFrameNode->pData.pts;
 			 free( pAVFrameNode );
 			 if ( pAVFrame )
@@ -225,19 +226,24 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 				 //清理frame
 				 av_free( pAVFrame);
 
-				 // The current time is the sample's start
-				 CRefTime rtStart = m_rtSampleTime;
 
-				 // Increment to find the finish time
-				 m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
-				 pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+			 }*/
 
-				 //REFERENCE_TIME rt = pts * UNITS;
-				 //REFERENCE_TIME rtend = rt;// + 50 * 10000;
-				 //pSamp->SetTime( &rt , &rtend );
-				 
-				 pSamp->SetSyncPoint(TRUE);
-			 }
+		CopyMemory( pData , pAVFrameNode->pData.vdata , pAVFrameNode->pData.ldatalen  );
+		pSamp->SetActualDataLength( pAVFrameNode->pData.ldatalen );
+
+		// The current time is the sample's start
+		CRefTime rtStart = m_rtSampleTime;
+
+		// Increment to find the finish time
+		m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
+		pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+
+		//REFERENCE_TIME rt = pts * UNITS;
+		//REFERENCE_TIME rtend = rt;// + 50 * 10000;
+		//pSamp->SetTime( &rt , &rtend );
+
+		pSamp->SetSyncPoint(TRUE);
 			 
 		}
 	}
@@ -483,6 +489,13 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 			memcpy( pData , pNode->pData.audio_buf , pNode->pData.data_size );						
 			pSamp->SetActualDataLength( pNode->pData.data_size );
 			free( pNode );
+			// The current time is the sample's start
+			CRefTime rtStart = m_rtSampleTime;
+
+			// Increment to find the finish time
+			//m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
+			//pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+			pSamp->SetSyncPoint(TRUE);
 		}
 	}
 	return S_OK;
@@ -552,6 +565,18 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	pMediaType->SetSubtype( &MEDIASUBTYPE_PCM /*MEDIASUBTYPE_WAVE*/ );
 	pMediaType->SetTemporalCompression(FALSE);
 	pMediaType->SetSampleSize( AVCODEC_MAX_AUDIO_FRAME_SIZE * 4 );
+
+	return S_OK;
+}
+
+HRESULT CAudioStreamPin::OnThreadCreate(void)
+{
+	CAutoLock cAutoLockShared(&m_cSharedState);
+	m_rtSampleTime = 0;
+
+	// we need to also reset the repeat time in case the system
+	// clock is turned off after m_iRepeatTime gets very big
+	m_iRepeatTime = 10000000;
 
 	return S_OK;
 }
@@ -713,7 +738,7 @@ void CNetSourceFilter::NoitfyStart()
 					IReferenceClock *pIRefClock = NULL;
 					if ( SUCCEEDED( CoCreateInstance( CLSID_SystemClock , NULL , CLSCTX_INPROC_SERVER , IID_IReferenceClock , (LPVOID*)&pIRefClock ) ) )
 					{						
-						hr = pIMediaFilter->SetSyncSource( pIRefClock );
+						//hr = pIMediaFilter->SetSyncSource( pIRefClock );
 						pIRefClock->Release();
 					}
 					pIMediaFilter->Run(0); //开始播放视频

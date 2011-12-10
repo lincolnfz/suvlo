@@ -58,6 +58,8 @@ class CAudioStreamPin : public CSourceStream
 public:
 	CAudioStreamPin(HRESULT *phr, CSource *pFilter);
 	virtual ~CAudioStreamPin();
+	// Resets the stream time to zero
+	HRESULT OnThreadCreate(void);
 
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
@@ -68,6 +70,9 @@ protected:
 
 protected:
 	CCritSec m_cSharedState;            // Protects our internal state
+
+	int m_iRepeatTime;                  // Time in msec between frames
+	CRefTime m_rtSampleTime;            // The time stamp for each sample
 
 };
 

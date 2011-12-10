@@ -228,6 +228,8 @@ private:
 typedef struct _tagVideoData{
 	AVFrame *avframe;
 	double pts;
+	unsigned long ldatalen;
+	BYTE vdata[360000];
 }VideoData;
 
 typedef struct _tagAudioData{
@@ -345,6 +347,9 @@ int destoryDataLink( DataLink<T> **ppDataLink )
 	return 0;
 }
 
+long generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *pFrame , 
+	int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+	int widthDst , int heightDst , PixelFormat pixFmtDst );
 
 
 // {7CCDB408-C5CA-447B-A34B-E1106F0D0119}

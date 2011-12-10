@@ -90,3 +90,60 @@ int destoryAVFrameLink( AVFrameLink **avframelink )
 	*avframelink = NULL;	
 	return 0;
 }
+
+long generateRGBDate( BYTE *pDst , SwsContext **ctx , AVFrame *pFrame , 
+	int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+	int widthDst , int heightDst , PixelFormat pixFmtDst )
+{
+	long lsize = 0;
+	*ctx = sws_getCachedContext( *ctx ,
+		widthSrc ,
+		heightSrc ,
+		pixFmtSrc , 
+		widthDst ,
+		heightDst ,
+		pixFmtDst ,  SWS_BICUBIC , NULL , NULL , NULL );
+	if ( *ctx )
+	{
+		 AVPicture pict;
+		int ret = avpicture_alloc( &pict , pixFmtDst , 
+				widthDst , 
+				heightDst);
+		//µ¹ÖÃµßµ¹µÄÍ¼Ïñ
+		/*
+		pAVFrame->data[0] = pAVFrame->data[0]+pAVFrame->linesize[0]*( g_pVideoState->video_st->codec->height-1 );
+		pAVFrame->data[1] = pAVFrame->data[1]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1;  
+		pAVFrame->data[2] = pAVFrame->data[2]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1; 
+		pAVFrame->linesize[0] *= -1;
+		pAVFrame->linesize[1] *= -1;  
+		pAVFrame->linesize[2] *= -1;
+		*/
+		//µ¹ÖÃµßµ¹µÄÍ¼Ïñ ok
+				
+		//×ª»»³Érgb
+		if ( !ret && sws_scale( *ctx , pFrame->data , pFrame->linesize , 0 , heightSrc , pict.data , pict.linesize ) )
+		{
+			lsize = pict.linesize[0]*heightSrc;
+			CopyMemory(pDst , pict.data[0] , lsize );
+			pDst += lsize;
+			if ( pict.linesize[1] )
+			{
+				int tmplen = pict.linesize[1]*heightSrc;
+				CopyMemory(pDst , pict.data[1] , tmplen );
+				pDst += tmplen;
+				lsize += tmplen;
+			}
+			if ( pict.linesize[2] )
+			{
+				int tmplen = pict.linesize[2]*heightSrc;
+				CopyMemory(pDst , pict.data[2] , tmplen );
+				pDst += tmplen;
+				lsize += tmplen;
+			}
+
+			avpicture_free( &pict );
+		}
+				
+	}
+	return lsize;
+}

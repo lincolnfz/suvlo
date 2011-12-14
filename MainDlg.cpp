@@ -27,7 +27,7 @@ unsigned int __stdcall run( void* parm )
 CMainDlg::CMainDlg(void):CBkDialogImpl<CMainDlg>(IDR_BK_MAIN_DIALOG)
 {
 	m_hdll_source = NULL;
-	m_pGraphBuilder = NULL;
+	m_pFilterGraph = NULL;
 	pMainDlg = this;
 	BkString::Load(IDR_BK_STRING_DEF); // 加载字符串
 	BkFontPool::SetDefaultFont(0, -12); // 设置字体
@@ -94,7 +94,7 @@ void CMainDlg::play( const char* url )
 	//设置videorender播放窗口到程序的界面上
 	HWND hPlay = m_playwnd.m_hWnd;
 	IBaseFilter *pIBaseFilter = NULL;
-	if ( SUCCEEDED( m_pGraphBuilder->FindFilterByName( filterNam[1] , &pIBaseFilter ) ) )
+	if ( SUCCEEDED( m_pFilterGraph->FindFilterByName( filterNam[1] , &pIBaseFilter ) ) )
 	{
 		IVideoWindow *pIVideoWindow = NULL;
 		if ( SUCCEEDED(pIBaseFilter->QueryInterface( IID_IVideoWindow , (void**)&pIVideoWindow )) )
@@ -114,7 +114,7 @@ void CMainDlg::play( const char* url )
 	hThread = (HANDLE)_beginthreadex( NULL , NULL , &run , (void*)url , 0 , &threadID );
 	CloseHandle( hThread );*/
 	IBaseFilter *pBaseFilter = NULL;
-	m_pGraphBuilder->FindFilterByName( filterNam[0] , &pBaseFilter );
+	m_pFilterGraph->FindFilterByName( filterNam[0] , &pBaseFilter );
 
 	INetSource *pNetSource = NULL;
 	pBaseFilter->QueryInterface( IID_INetSource , (void**)&pNetSource );
@@ -181,7 +181,7 @@ LRESULT CMainDlg::OnValChange(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 BOOL CMainDlg::Init()
 {
-
+	HRESULT hr = S_FALSE;
 	CString dsFilterLibPath;
 	dsFilterLibPath.Format( _T("%s\\dsNetMedia.dll") , strAppPath );
 	m_hdll_source = CoLoadLibrary( T2OLE(dsFilterLibPath.GetBuffer() ) , FALSE );
@@ -195,14 +195,14 @@ BOOL CMainDlg::Init()
 	//得到类工厂
 	p_dllgetclassObject( CLSID_NetMediaSource , IID_IClassFactory , (void**)&pFactouy );
 	IBaseFilter* pBaseFilter = NULL;
-	HRESULT hr = pFactouy->CreateInstance( NULL , IID_IBaseFilter , (void**)&pBaseFilter );
+	hr = pFactouy->CreateInstance( NULL , IID_IBaseFilter , (void**)&pBaseFilter );
 	pFactouy->Release();
 	
-	if( FAILED( CoCreateInstance( CLSID_FilterGraph , NULL , CLSCTX_INPROC_SERVER, IID_IGraphBuilder , (void**)&m_pGraphBuilder ) ) )
+	if( FAILED( CoCreateInstance( CLSID_FilterGraph , NULL , CLSCTX_INPROC_SERVER, IID_IFilterGraph , (void**)&m_pFilterGraph ) ) )
 	{
 		return FALSE;
 	}
-	if( FAILED( m_pGraphBuilder->AddFilter( pBaseFilter , filterNam[0] ) ) )
+	if( FAILED( m_pFilterGraph->AddFilter( pBaseFilter , filterNam[0] ) ) )
 	{
 		return FALSE;
 	}
@@ -211,27 +211,37 @@ BOOL CMainDlg::Init()
 	IBaseFilter *pVideoRenderFilter = NULL;
 	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
 	{
-		m_pGraphBuilder->AddFilter( pVideoRenderFilter , filterNam[1] );
+		m_pFilterGraph->AddFilter( pVideoRenderFilter , filterNam[1] );
 		pVideoRenderFilter->Release();
 	}
 
 	IBaseFilter *pAudioRenderFilter = NULL;
 	if ( SUCCEEDED( CoCreateInstance( CLSID_AudioRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
 	{
-		m_pGraphBuilder->AddFilter( pAudioRenderFilter , filterNam[2] );
+		m_pFilterGraph->AddFilter( pAudioRenderFilter , filterNam[2] );
 		pAudioRenderFilter->Release();
 	}
-	 
-	
-	
+
+	IMediaFilter *pIMediaFilter = NULL;
+	if ( SUCCEEDED( m_pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
+	{
+		IReferenceClock *pRefClock = NULL;
+		if ( SUCCEEDED(pAudioRenderFilter->QueryInterface( IID_IReferenceClock , (void**)&pRefClock )) )
+		{
+			hr = pIMediaFilter->SetSyncSource(pRefClock);
+			hr = pVideoRenderFilter->SetSyncSource(pRefClock);
+			hr = pAudioRenderFilter->SetSyncSource(pRefClock);
+		}
+	}
+	 	 		
 	return TRUE;
 }
 
 BOOL CMainDlg::Clean()
 {
-	if( m_pGraphBuilder )
+	if( m_pFilterGraph )
 	{
-		m_pGraphBuilder->Release();
+		m_pFilterGraph->Release();
 	}
 	if ( m_hdll_source )
 	{

@@ -61,6 +61,9 @@ public:
 	// Resets the stream time to zero
 	HRESULT OnThreadCreate(void);
 
+	// Quality control notifications sent to us
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);	
+
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
 

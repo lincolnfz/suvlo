@@ -58,7 +58,8 @@ public:
 
 protected:
 	HINSTANCE m_hdll_source;
-	IGraphBuilder *m_pGraphBuilder;
+	//IGraphBuilder *m_pGraphBuilder;
+	IFilterGraph *m_pFilterGraph;
 
 public:
 	CPlayWnd m_playwnd;

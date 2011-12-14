@@ -495,6 +495,7 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 			// Increment to find the finish time
 			//m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
 			//pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+			//pSamp->SetTime( NULL , NULL );
 			pSamp->SetSyncPoint(TRUE);
 		}
 	}
@@ -578,6 +579,11 @@ HRESULT CAudioStreamPin::OnThreadCreate(void)
 	// clock is turned off after m_iRepeatTime gets very big
 	m_iRepeatTime = 10000000;
 
+	return S_OK;
+}
+
+STDMETHODIMP CAudioStreamPin::Notify(IBaseFilter * pSender, Quality q)
+{
 	return S_OK;
 }
 
@@ -735,12 +741,13 @@ void CNetSourceFilter::NoitfyStart()
 				IMediaFilter *pIMediaFilter = NULL;
 				if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
 				{				
+					/*
 					IReferenceClock *pIRefClock = NULL;
 					if ( SUCCEEDED( CoCreateInstance( CLSID_SystemClock , NULL , CLSCTX_INPROC_SERVER , IID_IReferenceClock , (LPVOID*)&pIRefClock ) ) )
 					{						
-						//hr = pIMediaFilter->SetSyncSource( pIRefClock );
+						hr = pIMediaFilter->SetSyncSource( pIRefClock );
 						pIRefClock->Release();
-					}
+					}*/
 					pIMediaFilter->Run(0); //开始播放视频
 					pIMediaFilter->Release();
 				}

@@ -244,6 +244,11 @@ HRESULT CVideoStreamPin::FillBuffer(IMediaSample *pSamp)
 		//pSamp->SetTime( &rt , &rtend );
 
 		pSamp->SetSyncPoint(TRUE);
+		
+		LONGLONG lls,lle;
+		pSamp->GetTime( &lls , &lle );
+		DbgLog((LOG_TRACE, 0, TEXT("video s:%I64d ,e:%I64d\r"), lls,lle));
+
 			 
 		}
 	}
@@ -437,8 +442,8 @@ STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 	//}
 
 	// skip forwards
-	if(q.Late > 0)
-		m_rtSampleTime += q.Late;
+	//if(q.Late > 0)
+	//	m_rtSampleTime += q.Late;
 	
 	return NOERROR;
 }
@@ -446,7 +451,7 @@ STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 HRESULT CVideoStreamPin::OnThreadCreate(void)
 {
 	CAutoLock cAutoLockShared(&m_cSharedState);
-	m_rtSampleTime = 0;
+	m_rtSampleTime = 87074829; //0;
 
 	// we need to also reset the repeat time in case the system
 	// clock is turned off after m_iRepeatTime gets very big
@@ -475,6 +480,7 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 {
 	BYTE *pData;
 	long cbData;
+	HRESULT hr = S_FALSE;
 	CAutoLock cAutoLock( &m_cSharedState );
 	CheckPointer(pSamp, E_POINTER);
 	pSamp->GetPointer(&pData);
@@ -488,15 +494,23 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 		{
 			memcpy( pData , pNode->pData.audio_buf , pNode->pData.data_size );						
 			pSamp->SetActualDataLength( pNode->pData.data_size );
-			free( pNode );
+			
 			// The current time is the sample's start
 			CRefTime rtStart = m_rtSampleTime;
+			double dbsec = (double)pNode->pData.data_size / (double)m_nAvgSecTime;
+			m_rtSampleTime = rtStart + dbsec * 10000000;
+			free( pNode );
 
 			// Increment to find the finish time
 			//m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
-			//pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+			hr = pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &rtStart);
 			//pSamp->SetTime( NULL , NULL );
-			pSamp->SetSyncPoint(TRUE);
+			hr = pSamp->SetSyncPoint(TRUE);
+			LONGLONG llstart , llend;
+			pSamp->GetMediaTime( &llstart , &llend );
+			LONGLONG lls,lle;
+			pSamp->GetTime( &lls , &lle );
+			DbgLog((LOG_TRACE, 0, TEXT("audiorend s:%I64d ,e:%I64d\r"), lls,lle));
 		}
 	}
 	return S_OK;
@@ -560,6 +574,7 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 
 	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
 	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
+	m_nAvgSecTime = pWaveFmt->nAvgBytesPerSec;
 
 	pMediaType->SetType(&MEDIATYPE_Audio);
 	pMediaType->SetFormatType(&FORMAT_WaveFormatEx);

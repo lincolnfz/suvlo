@@ -76,6 +76,7 @@ protected:
 
 	int m_iRepeatTime;                  // Time in msec between frames
 	CRefTime m_rtSampleTime;            // The time stamp for each sample
+	DWORD m_nAvgSecTime;
 
 };
 

@@ -672,14 +672,73 @@ static int get_video_frame(VideoState *is, AVFrame *frame, int64_t *pts, AVPacke
 
 //解码音频数据
 static int get_audio_frame( VideoState *is , AudioData *outdata , AVPacket *pkt ){
-	int ret = 0;
+	//int ret = 0;
+	//if ( pkt->data == flush_pkt.data )
+	//{
+	//	//遇到结束的数据包
+	//	return -1;
+	//}
+	//ret = avcodec_decode_audio3( is->audio_st->codec , (int16_t *)(outdata->audio_buf) , &(outdata->data_size) , pkt );
+	//return ret;
+
+	AVPacket *pkt_temp = &is->audio_pkt_temp;
+	AVCodecContext *dec= is->audio_st->codec;
+	int len1, len2, resampled_data_size;
+	int64_t dec_channel_layout;
+	double pts;
+	int new_packet = 0;
+	int flush_complete = 0;
 	if ( pkt->data == flush_pkt.data )
 	{
 		//遇到结束的数据包
-		return 0;
+		avcodec_flush_buffers(dec);
+		return -1;
 	}
-	ret = avcodec_decode_audio3( is->audio_st->codec , (int16_t *)(outdata->audio_buf) , &(outdata->data_size) , pkt );
-	return ret;
+
+	pkt_temp->data = pkt->data;
+	pkt_temp->size = pkt->size;
+	pkt_temp->flags           = pkt->flags;
+	pkt_temp->side_data       = pkt->side_data;
+	pkt_temp->side_data_elems = pkt->side_data_elems;
+
+	for(;;) {
+		/* NOTE: the audio packet can contain several frames */
+		while (pkt_temp->size > 0 || (!pkt_temp->data && new_packet)) {
+			if (flush_complete)
+				break;
+			new_packet = 0;
+			outdata->data_size = sizeof(outdata->audio_buf);
+			len1 = avcodec_decode_audio3(dec,
+				(int16_t *)(outdata->audio_buf), &(outdata->data_size),
+				pkt_temp);
+			if (len1 < 0) {
+				/* if error, we skip the frame */
+				pkt_temp->size = 0;
+				break;
+			}
+
+			pkt_temp->data += len1;
+			pkt_temp->size -= len1;
+
+			if (outdata->data_size <= 0) {
+				/* stop sending empty packets if the decoder is finished */
+				if (!pkt_temp->data && dec->codec->capabilities & CODEC_CAP_DELAY)
+					flush_complete = 1;
+				continue;
+			}
+
+			resampled_data_size = outdata->data_size;
+
+			return resampled_data_size;
+		}
+
+		if (is->paused || is->audioq.abort_request) {
+			return -1;
+		}
+
+		return -1;
+
+	}
 }
 
 /**
@@ -703,7 +762,10 @@ unsigned int __stdcall decode_audio_thread( void* arg )
 		if ( ret < 0 )
 		{
 			free( pDataNode );
-			goto end;
+			if (is->paused || is->audioq.abort_request) {
+				goto end;
+			}
+			
 		}
 		putDataLink( pAudioLink , pDataNode );
 		
@@ -1331,7 +1393,7 @@ unsigned __stdcall readThread( void* arg )
 
 		
 		++loop;
-		if ( loop == 1000 && st == 0 )
+		if ( loop == 300 && st == 0 )
 		{
 			st = 1;
 			g_pNetSourceFilter->NoitfyStart();

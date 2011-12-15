@@ -1393,7 +1393,7 @@ unsigned __stdcall readThread( void* arg )
 
 		
 		++loop;
-		if ( loop == 300 && st == 0 )
+		if ( loop == 100 && st == 0 )
 		{
 			st = 1;
 			g_pNetSourceFilter->NoitfyStart();

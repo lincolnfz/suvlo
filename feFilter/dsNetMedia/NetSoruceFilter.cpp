@@ -451,7 +451,7 @@ STDMETHODIMP CVideoStreamPin::Notify(IBaseFilter * pSender, Quality q)
 HRESULT CVideoStreamPin::OnThreadCreate(void)
 {
 	CAutoLock cAutoLockShared(&m_cSharedState);
-	m_rtSampleTime = 0;//87074829; //0;
+	m_rtSampleTime = 0;
 
 	// we need to also reset the repeat time in case the system
 	// clock is turned off after m_iRepeatTime gets very big
@@ -502,9 +502,7 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 			free( pNode );
 
 			// Increment to find the finish time
-			//m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
 			hr = pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
-			//pSamp->SetTime( NULL , NULL );
 			hr = pSamp->SetSyncPoint(TRUE);
 			LONGLONG llstart , llend;
 			pSamp->GetMediaTime( &llstart , &llend );

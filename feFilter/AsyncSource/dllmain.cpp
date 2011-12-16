@@ -1,26 +1,23 @@
 // dllmain.cpp : 定义 DLL 应用程序的入口点。
-#include "stdafx.h"
 #include <streams.h>
 #include <initguid.h>
-#include "NetSoruceFilter.h"
-#include "common.h"
+#include "defhead.h"
+#include "AsynSourceFilter.h"
+
+#define g_wszAsynSourceFilter L"Asyn Source Filter"
 
 //定义媒体类型
 AMOVIESETUP_MEDIATYPE sudMediaTypes[]={
 	{
-		&MEDIATYPE_Video ,  // Major type
-		&MEDIASUBTYPE_NULL  // Minor type
-	},
-	{
-		&MEDIATYPE_Audio ,  // Major type
+		&MEDIATYPE_Stream ,  // Major type
 		&MEDIASUBTYPE_NULL  // Minor type
 	}
 };
 
 //定义引脚
-AMOVIESETUP_PIN subOutputPin[] = {
+AMOVIESETUP_PIN subOutputPin[]={
 	{
-		L"Video_Output",      // Obsolete, not used.
+		L"Stream_Output",      // Obsolete, not used.
 		FALSE,			// Is this pin rendered?
 		TRUE,           // Is it an output pin?
 		FALSE,          // Can the filter create zero instances?
@@ -29,26 +26,14 @@ AMOVIESETUP_PIN subOutputPin[] = {
 		NULL,           // Obsolete.
 		1, // Number of media types.
 		&sudMediaTypes[0] // Pointer to media types.
-	},
-	{
-		L"Audio_Output",      // Obsolete, not used.
-		FALSE,			// Is this pin rendered?
-		TRUE,           // Is it an output pin?
-		FALSE,          // Can the filter create zero instances?
-		FALSE,          // Does the filter create multiple instances?
-		&CLSID_NULL,    // Obsolete.
-		NULL,           // Obsolete.
-		1, // Number of media types.
-		&sudMediaTypes[1] // Pointer to media types.
-	}	
-	
+	}
 };
 
 //定义滤波器
 AMOVIESETUP_FILTER subNetMediaFilters[] = {
 	{
-		&CLSID_NetMediaSource,    // Filter CLSID
-		g_wszNetSourceFilter,        // String name
+		&CLSID_AsynSource,    // Filter CLSID
+		g_wszAsynSourceFilter,        // String name
 		MERIT_DO_NOT_USE,       // Filter merit
 		sizeof(subOutputPin)/sizeof(subOutputPin[0]), // Number pins
 		subOutputPin     // Pin details
@@ -62,11 +47,11 @@ AMOVIESETUP_FILTER subNetMediaFilters[] = {
 
 CFactoryTemplate g_Templates[] = {
 	{
-		g_wszNetSourceFilter,    // Name
-		&CLSID_NetMediaSource,  // CLSID
-		CNetSourceFilter::CreateInstance,                    // Method to create an instance of MyComponent
+		g_wszAsynSourceFilter,    // Name
+		&CLSID_AsynSource,  // CLSID
+		CAsynSourceFilter::CreateInstance,                    // Method to create an instance of MyComponent
 		NULL,                    // Initialization function
-		&subNetMediaFilters[0]       // Set-up information (for filters)
+		&subNetMediaFilters[0]   // Set-up information (for filters)
 	}
 };
 

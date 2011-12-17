@@ -45,7 +45,7 @@ struct DataLink
 template<class T>
 int initDataLink( DataLink<T> **ppDataLink )
 {
-	*ppDataLink = (DataLink<T>*)malloc( sizeof(DataLink<T>) );
+	*ppDataLink = new DataLink<T>();//(DataLink<T>*)malloc( sizeof(DataLink<T>) );
 	(*ppDataLink)->nb_size = 0;
 	(*ppDataLink)->pHead = NULL;
 	(*ppDataLink)->pTail = NULL;
@@ -119,7 +119,7 @@ int flushDataLink( DataLink<T> *pDataLink )
 	{
 		pVisit = pDataLink->pHead;
 		pDataLink->pHead = pDataLink->pHead->pNext;
-		free( pVisit );
+		delete( pVisit );
 		--(pDataLink->nb_size);
 	}
 	pDataLink->pTail = NULL;
@@ -132,7 +132,7 @@ int destoryDataLink( DataLink<T> **ppDataLink )
 	flushDataLink(*ppDataLink);
 	CloseHandle( (*ppDataLink)->hEvent );
 	CloseHandle( (*ppDataLink)->hMutex );
-	free( *ppDataLink );
+	delete( *ppDataLink );
 	*ppDataLink = NULL;
 	return 0;
 }

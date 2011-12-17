@@ -229,7 +229,7 @@ CAsynReader::CAsynReader(
 	//set use media type
 	m_mt.SetType(&MEDIATYPE_Stream);
 	m_mt.SetSubtype(&MEDIASUBTYPE_NULL);
-	m_mt.bTemporalCompression = TRUE;
+	m_mt.SetTemporalCompression(TRUE);
 	m_mt.lSampleSize = 1;
 }
 

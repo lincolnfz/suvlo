@@ -86,12 +86,15 @@
     <None Include="AsyncSource.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\ObjPool.cpp" />
     <ClCompile Include="asyncio.cpp" />
     <ClCompile Include="AsynSourceFilter.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FeBufPool.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\feUtil.h" />
+    <ClInclude Include="..\common\ObjPool.h" />
     <ClInclude Include="asyncio.h" />
     <ClInclude Include="AsynSourceFilter.h" />
     <ClInclude Include="defhead.h" />

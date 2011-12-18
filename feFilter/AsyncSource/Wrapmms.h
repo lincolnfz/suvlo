@@ -17,8 +17,8 @@ public:
 
 	void openfile( const char* lpUrl );
 	static unsigned CALLBACK recvdata( void *arge );
-	void getTotalSec(){ return m_totalsec; }
-	void getTotalRaw(){ return m_totalraw; }
+	double getTotalSec(){ return m_totalsec; }
+	uint64_t getTotalRaw(){ return m_totalraw; }
 
 protected:
 	mms_io_t* m_io_t;

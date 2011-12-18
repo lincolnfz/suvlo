@@ -42,16 +42,23 @@ public:
 	}
 
 	~CObjQueue(){
-		Clean();
+		Destory();
 	}
 
 	void Init( long size ){
 		m_cbsize = size;
 		m_cursor = 0;
+		m_eof = 0;
 		m_pObjQueue = new T[size]();
 	}
 
-	void Clean(){
+	void Reset(){
+		m_cbsize = size;
+		m_cursor = 0;
+		m_eof = 0;
+	}
+
+	void Destory(){
 		if ( m_pObjQueue )
 		{
 			delete []m_pObjQueue;
@@ -68,11 +75,16 @@ public:
 	long Getcbsize(){ return m_cbsize; }
 	long Getcursor(){ return m_cursor; }
 	void Resetcursor(){ m_cursor = 0; }
+	int GetEof(){return m_eof; }
+	void SetPosition( LONGLONG ll ){ m_position = ll; }
+	LONGLONG GetPosition(){ return m_position; }
 
 protected:
 	T *m_pObjQueue;
 	long m_cbsize; //有多少对像空间
 	long m_cursor; //当前的游标,读模式表示已读到的位置,写模式表示已写到的位置
+	int m_eof;
+	LONGLONG m_position;
 };
 
 
@@ -93,7 +105,7 @@ public:
 		Init( m_units , m_size );
 	}
 	~CObjPool(){
-		Clean();
+		Destory();
 	}
 	int Init( int units , long size ){
 		m_units = units;
@@ -121,7 +133,7 @@ public:
 		return 0;
 	}
 
-	int Clean(){
+	int Destory(){
 		if ( m_pEmptyList )
 		{
 			destoryDataLink( &m_pEmptyList );
@@ -146,6 +158,10 @@ public:
 		{
 			goto getnew;
 		}
+		if ( pNode->pData->GetEof() )
+		{
+			return pNode;
+		}
 		if ( pNode->pData->Getcursor() < pNode->pData->Getcbsize() )
 		{
 			return pNode;
@@ -169,9 +185,11 @@ getnew:
 			return pNode;
 		}
 		pNode->pData->Resetcursor();
+		LONGLONG ll = pNode->pData->GetPosition();
 		putDataLink( m_pFullList , pNode );
 getnew:
 		pNode = getDataLink( m_pEmptyList );
+		pNode->pData->SetPosition( ll + m_size );
 		return pNode;
 	}
 

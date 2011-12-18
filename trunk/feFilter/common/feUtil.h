@@ -37,7 +37,7 @@ template<class T>
 struct DataLink 
 {
 	DataNode<T> *pHead , *pTail;
-	void *hMutex;
+	void *hMutex; //操作整个队列的鑜
 	void *hEvent;
 	int nb_size;
 };

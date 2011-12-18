@@ -3,6 +3,7 @@
 #include "defhead.h"
 #include "AsynSourceFilter.h"
 
+const long ONCEPACKSIZE = 8 * 1024;
 
 CAsynSourceOutPin::CAsynSourceOutPin(HRESULT * phr, CAsynReader *pReader ,CAsyncIo *pIo, CCritSec * pLock)
 	:CBasePin(NAME("Async output pin"), pReader , pLock , phr , L"Output" , PINDIR_OUTPUT),
@@ -173,8 +174,15 @@ STDMETHODIMP CAsynSourceOutPin::Request(
 	IMediaSample* pSample,
 	DWORD_PTR dwUser)
 {
+	HRESULT hr;
+	BYTE* pBuffer;
+	hr = pSample->GetPointer(&pBuffer);
+	if(FAILED(hr))
+	{
+		return hr;
+	}
 
-	return S_OK;
+	return m_pIo->Request(0, ONCEPACKSIZE, TRUE, pBuffer, (LPVOID)pSample, dwUser);
 }
 
 STDMETHODIMP CAsynSourceOutPin::WaitForNext(
@@ -182,8 +190,23 @@ STDMETHODIMP CAsynSourceOutPin::WaitForNext(
 	IMediaSample** ppSample,  // completed sample
 	DWORD_PTR * pdwUser)
 {
+	CheckPointer(ppSample,E_POINTER);
 
-	return S_OK;
+	LONG cbActual;
+	IMediaSample* pSample=0;
+
+	HRESULT hr = m_pIo->WaitForNext(dwTimeout,
+		(LPVOID*) &pSample,
+		pdwUser,
+		&cbActual);
+
+	if(SUCCEEDED(hr))
+	{
+		pSample->SetActualDataLength(cbActual);
+	}
+
+	*ppSample = pSample;
+	return hr;
 }
 
 STDMETHODIMP CAsynSourceOutPin::SyncReadAligned(
@@ -204,7 +227,8 @@ STDMETHODIMP CAsynSourceOutPin::SyncReadAligned(
 		return hr;
 	}
 	long cbActual = 0;
-	m_pIo->SyncReadAligned( 0 , 4*1024 , pByte , &cbActual , pSample );
+	m_pIo->SyncReadAligned( 0 , ONCEPACKSIZE , pByte , &cbActual , pSample );
+	pSample->SetActualDataLength( cbActual );
 
 	return S_OK;
 }

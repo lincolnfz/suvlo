@@ -6,12 +6,15 @@ struct UNIT_BUF
 {
 	long size;		//缓存单元的大小
 	long opsize; //已操作了多少数据,初始0,在读取下表示已读了多少数据,写模式下表示写了多少数据
+	int eof; //这是结束的单元队列 1结束
+	LONGLONG position;
 	char *pHead;
 };
 
 struct UNIT_BUF_POOL
 {
 	int units;
+	long unit_size;
 	UNIT_BUF *pList; //pList主要的队列 pEmpty空的对列 pFull填满的队列
 	DataLink<UNIT_BUF*> *pEmptyLink , *pFullLink;
 	DataNode<UNIT_BUF*> *pWrite , *pRead; //当前处在活动状态的填充单元与读取单元
@@ -28,7 +31,9 @@ struct UNIT_BUF_POOL
 	/**
 	清理缓冲池
 	*/
-	void CleanPool( UNIT_BUF_POOL* );
+	void DestoryPool( UNIT_BUF_POOL* );
+
+	void ResetPool( UNIT_BUF_POOL* );
 
 	DataNode<UNIT_BUF*> *GetReadUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pStale );
 

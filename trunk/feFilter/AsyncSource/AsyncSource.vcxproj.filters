@@ -35,6 +35,9 @@
     <ClCompile Include="..\common\ObjPool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Wrapmms.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defhead.h">
@@ -53,6 +56,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\common\ObjPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Wrapmms.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

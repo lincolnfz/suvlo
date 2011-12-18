@@ -57,6 +57,10 @@ int initDataLink( DataLink<T> **ppDataLink )
 template<class T>
 int putDataLink( DataLink<T> *pDataLink , DataNode<T> *pDatanode )
 {
+	if ( !pDatanode )
+	{
+		return 0;
+	}
 	pDatanode->pNext = NULL;
 	CFeLockMutex( pDataLink->hMutex );
 	if ( pDataLink->pHead == NULL )

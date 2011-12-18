@@ -15,21 +15,26 @@ CFeBufPool::~CFeBufPool(void)
 	CleanPool( &m_poolbuf );
 }
 
+//设置当前位置
 HRESULT CFeBufPool::SetPointer(LONGLONG llPos)
 {
+	m_poolbuf.llPosition = llPos;
 	return S_OK;
 }
 
 HRESULT CFeBufPool::Read(PBYTE pbBuffer, DWORD dwBytesToRead, BOOL bAlign, LPDWORD pdwBytesRead)
 {
+	*pdwBytesRead = ReadData( &m_poolbuf , (PCHAR)pbBuffer , dwBytesToRead );
 	return S_OK;
 }
 
+//返回文件的播放长度100ns为单位 (10^-7)
 LONGLONG CFeBufPool::Size(LONGLONG *pSizeAvailable /*= NULL*/)
 {
-	return S_OK;
+	return m_poolbuf.llRaw /= 10000000;
 }
 
+//数据按1字节对齐
 DWORD CFeBufPool::Alignment()
 {
 	return 1;
@@ -37,19 +42,20 @@ DWORD CFeBufPool::Alignment()
 
 void CFeBufPool::Lock()
 {
-	
+	m_csLock.Lock();
 }
 
 void CFeBufPool::Unlock()
 {
-	
+	m_csLock.Unlock();
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //缓冲池
 void InitPool( UNIT_BUF_POOL* pool, int units , long size )
 {
+	pool->sec = 0.0;
+	pool->llRaw = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
 	initDataLink(&pool->pEmptyLink);
@@ -129,6 +135,7 @@ getnew:
 	return pUnit;
 }
 
+//如果 len反回 <=0 说明已经没有数据
 long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 {		
 	long total = 0;
@@ -145,6 +152,11 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 		len -= lop;
 		total += lop;
 	}
+	if ( total <= 0 )
+	{
+		putDataLink( pool->pFullLink , pool->pWrite );
+	}
+
 	return total;
 }
 

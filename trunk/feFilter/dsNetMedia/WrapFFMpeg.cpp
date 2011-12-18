@@ -765,7 +765,7 @@ unsigned int __stdcall decode_audio_thread( void* arg )
 			if (is->paused || is->audioq.abort_request) {
 				goto end;
 			}
-			
+			continue;
 		}
 		putDataLink( pAudioLink , pDataNode );
 		

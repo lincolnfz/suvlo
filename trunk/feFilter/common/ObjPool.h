@@ -78,6 +78,8 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////
 //对像池
+#define GETCLASSFUN(C , F) C::*F
+
 template<class T>
 class CObjPool
 {
@@ -173,8 +175,22 @@ getnew:
 		return pNode;
 	}
 
+	//在派生实现类,必须有填充与获取数据的方法
+	/*
 	virtual int WriteData() = 0;
 	virtual int ReadData() = 0;
+	*/
+	
+
+	virtual int RequestData(){
+
+		return 0;
+	}
+
+	virtual int FillData(){
+
+		return 0;
+	}
 
 protected:
 	CObjQueue<T> *m_pObjCollect;
@@ -197,14 +213,14 @@ public:
 
 	}
 
-	virtual int WriteData(){
+	/*virtual int WriteData( char parm ){
 		return 0;
 	}
 
 	virtual int ReadData()
 	{
 		return 0;
-	}
+	}*/
 };
 
 #endif //_OBJPOOL_H_

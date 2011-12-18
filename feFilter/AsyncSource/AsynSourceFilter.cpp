@@ -189,6 +189,22 @@ STDMETHODIMP CAsynSourceOutPin::WaitForNext(
 STDMETHODIMP CAsynSourceOutPin::SyncReadAligned(
 	IMediaSample* pSample)
 {
+	CheckPointer(pSample,E_POINTER);
+	REFERENCE_TIME tStart, tStop;
+	HRESULT hr = pSample->GetTime(&tStart, &tStop);
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	BYTE *pByte = NULL;
+	hr = pSample->GetPointer( &pByte );
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+	long cbActual = 0;
+	m_pIo->SyncReadAligned( 0 , 4*1024 , pByte , &cbActual , pSample );
 
 	return S_OK;
 }
@@ -257,7 +273,8 @@ CBasePin * CAsynReader::GetPin(int n)
 //////////////////////////////////////////////////////////////////////////
 //asyncfilter
 
-CAsynSourceFilter::CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr) : CAsynReader(NAME("feIO Reader") , pUnk , &m_feBufPool , phr)
+CAsynSourceFilter::CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr) : CAsynReader(NAME("feIO Reader") , pUnk , &m_feBufPool , phr),
+	m_wrapmms( m_feBufPool.getPool() )
 {
 
 }
@@ -288,6 +305,13 @@ CUnknown * WINAPI CAsynSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr
 
 STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 {
+	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
+	char *lpurl = new char[size];
+	WideCharToMultiByte (CP_OEMCP,NULL,url,-1,lpurl,size,NULL,FALSE);
+	//≤•∑≈‘∂≥Ã ”∆µ
+	m_wrapmms.openfile( lpurl );
+	delete []lpurl;
+
 	return S_OK;
 }
 

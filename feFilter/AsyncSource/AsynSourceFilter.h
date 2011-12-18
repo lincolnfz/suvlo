@@ -1,6 +1,7 @@
 #pragma once
 #include "asyncio.h"
 #include "FeBufPool.h"
+#include "Wrapmms.h"
 
 class CAsynReader;
 
@@ -174,6 +175,8 @@ class CAsynSourceFilter : public CAsynReader , public IFeFileSource
 {
 protected:
 	CFeBufPool m_feBufPool;
+	CWrapmms m_wrapmms;
+	//上面两个变量顺序不能颠倒
 
 public:
 	CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr);

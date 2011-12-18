@@ -1,6 +1,6 @@
 #pragma once
 #include "../common/feUtil.h"
-#include "../common/ObjPool.h"
+
 
 struct UNIT_BUF 
 {
@@ -15,6 +15,9 @@ struct UNIT_BUF_POOL
 	UNIT_BUF *pList; //pList主要的队列 pEmpty空的对列 pFull填满的队列
 	DataLink<UNIT_BUF*> *pEmptyLink , *pFullLink;
 	DataNode<UNIT_BUF*> *pWrite , *pRead; //当前处在活动状态的填充单元与读取单元
+	LONGLONG llRaw; //全部数量
+	LONGLONG llPosition; //当前的位置
+	double sec;
 };
 
 	/************************************************************************/
@@ -41,6 +44,11 @@ struct UNIT_BUF_POOL
 	*/
 	long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len );
 
+class CBufPoolOper{
+	virtual long filldata( char* , long len ) = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////
 class CFeBufPool : public CAsyncStream
 {
 public:
@@ -53,8 +61,11 @@ public:
 	virtual void Lock();
 	virtual void Unlock();
 
+	//扩展方法
+	UNIT_BUF_POOL *getPool(){ return &m_poolbuf; }
+
 protected:
 	UNIT_BUF_POOL m_poolbuf;
-	CExample example;
+	CCritSec       m_csLock;
 };
 

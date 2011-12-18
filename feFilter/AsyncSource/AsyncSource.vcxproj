@@ -91,6 +91,7 @@
     <ClCompile Include="AsynSourceFilter.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FeBufPool.cpp" />
+    <ClCompile Include="Wrapmms.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\feUtil.h" />
@@ -99,6 +100,7 @@
     <ClInclude Include="AsynSourceFilter.h" />
     <ClInclude Include="defhead.h" />
     <ClInclude Include="FeBufPool.h" />
+    <ClInclude Include="Wrapmms.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

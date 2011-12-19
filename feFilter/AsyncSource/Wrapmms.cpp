@@ -111,8 +111,10 @@ unsigned CALLBACK CWrapmms::recvdata( void *arge )
 	{
 		pMMS->m_totalsec = mms_get_time_length( pMMS->m_mms_t );
 		pMMS->m_totalraw = mms_get_raw_time_length( pMMS->m_mms_t );
+		pMMS->m_totalsize = mms_get_length( pMMS->m_mms_t );
 		pMMS->m_pBufpool->sec = pMMS->m_totalsec;
 		pMMS->m_pBufpool->llRaw = pMMS->m_totalraw;
+		pMMS->m_pBufpool->llSize = pMMS->m_totalsize;
 		char* buf = (char*)malloc(RECV_BUF_SIZE);
 		while(  true )
 		{		

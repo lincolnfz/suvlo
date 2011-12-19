@@ -28,5 +28,6 @@ protected:
 	UNIT_BUF_POOL *m_pBufpool;
 	double m_totalsec;
 	uint64_t m_totalraw; //时间长度换算成100ns单位计量
+	uint64_t m_totalsize;
 };
 

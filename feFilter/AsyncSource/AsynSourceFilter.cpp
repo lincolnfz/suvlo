@@ -3,8 +3,6 @@
 #include "defhead.h"
 #include "AsynSourceFilter.h"
 
-const long ONCEPACKSIZE = 8 * 1024;
-
 CAsynSourceOutPin::CAsynSourceOutPin(HRESULT * phr, CAsynReader *pReader ,CAsyncIo *pIo, CCritSec * pLock)
 	:CBasePin(NAME("Async output pin"), pReader , pLock , phr , L"Output" , PINDIR_OUTPUT),
 	m_pReader(pReader),m_pIo(pIo)
@@ -108,7 +106,7 @@ HRESULT CAsynSourceOutPin::CheckMediaType(const CMediaType* pType)
 	return S_FALSE;
 }
 
-//向输出pin寻求一个分配器
+//输入pin向输出pin寻求一个分配器
 STDMETHODIMP CAsynSourceOutPin::RequestAllocator(
 	IMemAllocator* pPreferred,
 	ALLOCATOR_PROPERTIES* pProps,
@@ -174,7 +172,41 @@ STDMETHODIMP CAsynSourceOutPin::Request(
 	IMediaSample* pSample,
 	DWORD_PTR dwUser)
 {
-	HRESULT hr;
+	CheckPointer(pSample,E_POINTER);
+
+	REFERENCE_TIME tStart, tStop;
+	HRESULT hr = pSample->GetTime(&tStart, &tStop);
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	LONGLONG llPos = tStart / UNITS;
+	LONG lLength = (LONG) ((tStop - tStart) / UNITS);
+
+	LONGLONG llTotal=0, llAvailable=0;
+
+	hr = m_pIo->Length(&llTotal, &llAvailable);
+	if(llPos + lLength > llTotal)
+	{
+		// the end needs to be aligned, but may have been aligned
+		// on a coarser alignment.
+		LONG lAlign;
+		m_pIo->Alignment(&lAlign);
+
+		llTotal = (llTotal + lAlign -1) & ~(lAlign-1);
+
+		if(llPos + lLength > llTotal)
+		{
+			lLength = (LONG) (llTotal - llPos);
+
+			// must be reducing this!
+			ASSERT((llTotal * UNITS) <= tStop);
+			tStop = llTotal * UNITS;
+			pSample->SetTime(&tStart, &tStop);
+		}
+	}
+
 	BYTE* pBuffer;
 	hr = pSample->GetPointer(&pBuffer);
 	if(FAILED(hr))
@@ -182,7 +214,12 @@ STDMETHODIMP CAsynSourceOutPin::Request(
 		return hr;
 	}
 
-	return m_pIo->Request(0, ONCEPACKSIZE, TRUE, pBuffer, (LPVOID)pSample, dwUser);
+	return m_pIo->Request(llPos,
+		lLength,
+		TRUE,
+		pBuffer,
+		(LPVOID)pSample,
+		dwUser);
 }
 
 STDMETHODIMP CAsynSourceOutPin::WaitForNext(
@@ -213,6 +250,7 @@ STDMETHODIMP CAsynSourceOutPin::SyncReadAligned(
 	IMediaSample* pSample)
 {
 	CheckPointer(pSample,E_POINTER);
+
 	REFERENCE_TIME tStart, tStop;
 	HRESULT hr = pSample->GetTime(&tStart, &tStop);
 	if(FAILED(hr))
@@ -220,17 +258,49 @@ STDMETHODIMP CAsynSourceOutPin::SyncReadAligned(
 		return hr;
 	}
 
-	BYTE *pByte = NULL;
-	hr = pSample->GetPointer( &pByte );
+	LONGLONG llPos = tStart / UNITS;
+	LONG lLength = (LONG) ((tStop - tStart) / UNITS);
+
+	LONGLONG llTotal;
+	LONGLONG llAvailable;
+
+	hr = m_pIo->Length(&llTotal, &llAvailable);
+	if(llPos + lLength > llTotal)
+	{
+		// the end needs to be aligned, but may have been aligned
+		// on a coarser alignment.
+		LONG lAlign;
+		m_pIo->Alignment(&lAlign);
+
+		llTotal = (llTotal + lAlign -1) & ~(lAlign-1);
+
+		if(llPos + lLength > llTotal)
+		{
+			lLength = (LONG) (llTotal - llPos);
+
+			// must be reducing this!
+			ASSERT((llTotal * UNITS) <= tStop);
+			tStop = llTotal * UNITS;
+			pSample->SetTime(&tStart, &tStop);
+		}
+	}
+
+	BYTE* pBuffer;
+	hr = pSample->GetPointer(&pBuffer);
 	if(FAILED(hr))
 	{
 		return hr;
 	}
-	long cbActual = 0;
-	m_pIo->SyncReadAligned( 0 , ONCEPACKSIZE , pByte , &cbActual , pSample );
-	pSample->SetActualDataLength( cbActual );
 
-	return S_OK;
+	LONG cbActual;
+	hr = m_pIo->SyncReadAligned(llPos,
+		lLength,
+		pBuffer,
+		&cbActual,
+		pSample);
+
+	pSample->SetActualDataLength(cbActual);
+	return hr;
 }
 
 STDMETHODIMP CAsynSourceOutPin::SyncRead(

@@ -28,10 +28,10 @@ HRESULT CFeBufPool::Read(PBYTE pbBuffer, DWORD dwBytesToRead, BOOL bAlign, LPDWO
 	return S_OK;
 }
 
-//返回文件的播放长度100ns为单位 (10^-7)
+//返回文件的长度
 LONGLONG CFeBufPool::Size(LONGLONG *pSizeAvailable /*= NULL*/)
 {
-	return m_poolbuf.llRaw /= 10000000;
+	return m_poolbuf.llSize;
 }
 
 //数据按1字节对齐
@@ -56,6 +56,7 @@ void InitPool( UNIT_BUF_POOL* pool, int units , long size )
 {
 	pool->sec = 0.0;
 	pool->llRaw = 0;
+	pool->llSize = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
 	initDataLink(&pool->pEmptyLink);
@@ -97,6 +98,7 @@ void DestoryPool( UNIT_BUF_POOL* pool)
 void ResetPool( UNIT_BUF_POOL* pool){
 	pool->sec = 0.0;
 	pool->llRaw = 0;
+	pool->llSize = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
 	int idx = 0;

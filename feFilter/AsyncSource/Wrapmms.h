@@ -18,7 +18,7 @@ public:
 	void openfile( const char* lpUrl );
 	static unsigned CALLBACK recvdata( void *arge );
 	double getTotalSec(){ return m_totalsec; }
-	uint64_t getTotalRaw(){ return m_totalraw; }
+	uint64_t getTotalRaw(){ return m_filelen; }
 
 protected:
 	mms_io_t* m_io_t;
@@ -27,7 +27,7 @@ protected:
 	char m_url[256];
 	UNIT_BUF_POOL *m_pBufpool;
 	double m_totalsec;
-	uint64_t m_totalraw; //时间长度换算成100ns单位计量
-	uint64_t m_totalsize;
+	uint64_t m_timelen; //时间长度换算成100ns单位计量
+	uint64_t m_filelen; //文件长度
 };
 

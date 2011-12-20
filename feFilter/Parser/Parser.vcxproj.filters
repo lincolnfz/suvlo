@@ -15,57 +15,49 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="AsyncSource.def">
+    <None Include="ReadMe.txt" />
+    <None Include="Parser.def">
       <Filter>源文件</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="AsynSourceFilter.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="asyncio.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\ObjPool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Wrapmms.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="FeBufPool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\bufpool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="defhead.h">
+    <ClInclude Include="stdafx.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="AsynSourceFilter.h">
+    <ClInclude Include="targetver.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="asyncio.h">
+    <ClInclude Include="ParseFilter.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\feUtil.h">
+    <ClInclude Include="..\common\DefInterface.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\ObjPool.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Wrapmms.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="FeBufPool.h">
+    <ClInclude Include="..\common\filterUtil.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\common\bufpool.h">
       <Filter>头文件</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ParseFilter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\filterUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\bufpool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

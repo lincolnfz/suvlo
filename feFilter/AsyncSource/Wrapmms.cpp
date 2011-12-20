@@ -4,7 +4,8 @@
 #include <streams.h>
 #include "Wrapmms.h"
 #include "asyncio.h"
-#include "FeBufPool.h"
+//#include "FeBufPool.h"
+#include "../common/bufpool.h"
 
 
 #pragma comment( lib , "../../lib/libmms.lib" )
@@ -84,7 +85,8 @@ CWrapmms::CWrapmms(UNIT_BUF_POOL *pool )
 	m_playbuf = (char*)malloc( RECV_BUF_SIZE );
 	m_pBufpool = pool;
 	m_totalsec = 0;
-	m_totalraw = 0;
+	m_timelen = 0;
+	m_filelen = 0;
 }
 
 
@@ -110,11 +112,10 @@ unsigned CALLBACK CWrapmms::recvdata( void *arge )
 	if ( pMMS->m_mms_t )
 	{
 		pMMS->m_totalsec = mms_get_time_length( pMMS->m_mms_t );
-		pMMS->m_totalraw = mms_get_raw_time_length( pMMS->m_mms_t );
-		pMMS->m_totalsize = mms_get_length( pMMS->m_mms_t );
+		pMMS->m_timelen = mms_get_raw_time_length( pMMS->m_mms_t );
+		pMMS->m_filelen = mms_get_length( pMMS->m_mms_t );
 		pMMS->m_pBufpool->sec = pMMS->m_totalsec;
-		pMMS->m_pBufpool->llRaw = pMMS->m_totalraw;
-		pMMS->m_pBufpool->llSize = pMMS->m_totalsize;
+		pMMS->m_pBufpool->llRaw = pMMS->m_filelen;
 		char* buf = (char*)malloc(RECV_BUF_SIZE);
 		while(  true )
 		{		

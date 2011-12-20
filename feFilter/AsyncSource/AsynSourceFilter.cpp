@@ -128,6 +128,7 @@ STDMETHODIMP CAsynSourceOutPin::RequestAllocator(
 
 	if(pPreferred)
 	{
+		//要求分配器期望的属性
 		hr = pPreferred->SetProperties(pProps, &Actual);
 
 		if(SUCCEEDED(hr) && m_pIo->IsAligned(Actual.cbAlign))
@@ -137,7 +138,7 @@ STDMETHODIMP CAsynSourceOutPin::RequestAllocator(
 			return S_OK;
 		}
 	}
-
+	//下端的filter不提供MemAlloc,这时自已创建MemAlloc
 	// create our own allocator
 	IMemAllocator* pAlloc;
 	hr = InitAllocator(&pAlloc);
@@ -340,7 +341,6 @@ CAsynReader::CAsynReader(
 	m_mt.SetType(&MEDIATYPE_Stream);
 	m_mt.SetSubtype(&MEDIASUBTYPE_NULL);
 	m_mt.SetTemporalCompression(TRUE);
-	m_mt.lSampleSize = 1;
 }
 
 CAsynReader::~CAsynReader(){

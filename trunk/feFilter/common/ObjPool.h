@@ -44,7 +44,7 @@ public:
 		m_cbsize = size;
 		m_cursor = 0;
 		m_eof = 0;
-		m_pObjQueue = new T[size]();
+		m_pObjQueue = new CObj<T>[size]();
 	}
 
 	void Reset(){
@@ -63,26 +63,26 @@ public:
 		m_cbsize = 0;
 	}
 
-	T *GetQueue(){
+	/*CObj<T> *GetQueue(){
 		return m_pObjQueue;
-	}
+	}*/
 
 	long Getcbsize(){ return m_cbsize; }
 	long Getcursor(){ return m_cursor; }
 	long IncCursor( long l ){ m_cursor += l; return m_cursor; }
 	void Resetcursor(){ m_cursor = 0; }
-	int GetEof(){return m_eof; }
+	int IsEof(){return m_eof; }
 	void SetPosition( LONGLONG ll ){ m_position = ll; }
 	LONGLONG GetPosition(){ return m_position; }
 	T *GetData(){
-	   return &(m_pObjQueue[m_cursor]);
+	   return &(m_pObjQueue[m_cursor].GetData() );
     }
 	long CommitData(){
 		return IncCursor(1);
 	}
 
 protected:
-	T *m_pObjQueue;
+	CObj<T> *m_pObjQueue;
 	long m_cbsize; //有多少对像空间
 	long m_cursor; //当前的游标,读模式表示已读到的位置,写模式表示已写到的位置
 	int m_eof;
@@ -92,7 +92,7 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////
 //object pool
-#define GETCLASSFUN(C,F) C##::*##F
+#define GETCLASSFUN(C,F) C##::*##F()
 
 template<class T>
 class CObjPool
@@ -162,7 +162,7 @@ public:
 		{
 			goto getnew;
 		}
-		if ( pNode->pData->GetEof() )
+		if ( pNode->pData->IsEof() )
 		{
 			return pNode;
 		}

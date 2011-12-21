@@ -39,7 +39,7 @@
     <ClInclude Include="common.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="filterUtil.h">
+    <ClInclude Include="..\common\filterUtil.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,10 +62,10 @@
     <ClCompile Include="Wrapmms.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="filterUtil.cpp">
+    <ClCompile Include="common.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="common.cpp">
+    <ClCompile Include="..\common\filterUtil.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

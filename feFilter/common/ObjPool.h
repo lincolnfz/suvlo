@@ -11,19 +11,18 @@ template<class T>
 class CObj
 {
 public:
-	CObj( T data ){
-		m_Data = data;
+	CObj( ){
 	}
-	~CObj(){}
+	virtual ~CObj(){}
 
-	T GetData();
+	T& GetData();
 
 protected:
 	T m_Data;
 };
 
 template<class T>
-T CObj<T>::GetData(){
+T& CObj<T>::GetData(){
 	return m_Data;
 }
 

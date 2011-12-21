@@ -39,6 +39,12 @@
     <ClInclude Include="..\common\bufpool.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="WrapFFMpeg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\ObjPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -57,6 +63,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\common\bufpool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="WrapFFMpeg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\ObjPool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

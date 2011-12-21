@@ -13,7 +13,7 @@ class CWrapmms
 {
 public:
 	CWrapmms(UNIT_BUF_POOL*);
-	~CWrapmms(void);
+	virtual ~CWrapmms(void);
 
 	void openfile( const char* lpUrl );
 	static unsigned CALLBACK recvdata( void *arge );

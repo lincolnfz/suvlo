@@ -14,7 +14,7 @@ protected:
 
 public:
 	CAsynSourceOutPin(HRESULT * phr, CAsynReader *pReader , CAsyncIo *pIo, CCritSec * pLock);
-	~CAsynSourceOutPin();
+	virtual ~CAsynSourceOutPin();
 	virtual HRESULT InitAllocator(__deref_out IMemAllocator **ppAlloc);
 
 	// --- CUnknown ---
@@ -136,7 +136,7 @@ protected:
 	CMediaType m_mt;
 
 	// our output pin
-	CAsynSourceOutPin* m_pOutputPin;
+	CAsynSourceOutPin m_OutputPin;
 
 public:
 
@@ -148,7 +148,7 @@ public:
 		CAsyncStream *pStream,
 		HRESULT *phr);
 
-	~CAsynReader();
+	virtual ~CAsynReader();
 
 
 
@@ -167,7 +167,7 @@ public:
 		const AM_MEDIA_TYPE *pmt   // optional media type
 		)
 	{
-		return m_pOutputPin->CBasePin::Connect(pReceivePin, pmt);
+		return m_OutputPin.CBasePin::Connect(pReceivePin, pmt);
 	}
 };
 
@@ -180,7 +180,7 @@ protected:
 
 public:
 	CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr);
-	~CAsynSourceFilter();
+	virtual ~CAsynSourceFilter();
 
 	static CUnknown * WINAPI CreateInstance(LPUNKNOWN, HRESULT *);
 

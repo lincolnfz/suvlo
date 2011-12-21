@@ -269,6 +269,7 @@ HRESULT CVideoStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOC
 	// Ensure a minimum number of buffers
 	ppropInputRequest->cBuffers = 1;
 	ppropInputRequest->cbBuffer = pvi->bmiHeader.biSizeImage;
+	ppropInputRequest->cbAlign = 1; //框架好像会自动设置为1 ??
 	ASSERT( ppropInputRequest->cbBuffer );
 
 	// Ask the allocator to reserve us some sample memory. NOTE: the function
@@ -387,6 +388,7 @@ HRESULT CVideoStreamPin::GetMediaType(int iPosition, __inout CMediaType *pMediaT
 		break;
 	case 4:
 		{
+			//I420
 			pvi->bmiHeader.biCompression = MAKEFOURCC( 'I', '4', '2', '0');
 			pvi->bmiHeader.biBitCount    = 16;
 		}
@@ -526,6 +528,7 @@ HRESULT CAudioStreamPin::DecideBufferSize( IMemAllocator * pAlloc, __inout ALLOC
 	// Ensure a minimum number of buffers
 	ppropInputRequest->cBuffers = 4;
 	ppropInputRequest->cbBuffer = AVCODEC_MAX_AUDIO_FRAME_SIZE * 4;
+	ppropInputRequest->cbAlign = 1; //框架好像会自动设置为1 ??
 	ASSERT( ppropInputRequest->cbBuffer );
 
 	// Ask the allocator to reserve us some sample memory. NOTE: the function

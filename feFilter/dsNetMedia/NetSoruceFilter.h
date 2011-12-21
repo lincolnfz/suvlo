@@ -64,6 +64,10 @@ public:
 	// Quality control notifications sent to us
 	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);	
 
+	HRESULT ChargeMediaType();
+
+	HRESULT SetNewType( CMediaType *pMediaType );
+
 protected:
 	virtual HRESULT FillBuffer(IMediaSample *pSamp); //pure
 
@@ -77,6 +81,7 @@ protected:
 	int m_iRepeatTime;                  // Time in msec between frames
 	CRefTime m_rtSampleTime;            // The time stamp for each sample
 	DWORD m_nAvgSecTime;
+	int m_times;
 
 };
 

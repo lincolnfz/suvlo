@@ -470,7 +470,7 @@ HRESULT CVideoStreamPin::OnThreadCreate(void)
 CAudioStreamPin::CAudioStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Audio_Out")
 {
-	
+	m_times = 0;
 }
 
 CAudioStreamPin::~CAudioStreamPin()
@@ -478,8 +478,66 @@ CAudioStreamPin::~CAudioStreamPin()
 
 }
 
+HRESULT CAudioStreamPin::SetNewType( CMediaType *pMediaType )
+{
+	CheckPointer(pMediaType, E_POINTER);
+	WAVEFORMATEX *pWaveFmt = (WAVEFORMATEX*)pMediaType->AllocFormatBuffer( sizeof(WAVEFORMATEX) );
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+
+	if(NULL == pWaveFmt)
+		return(E_OUTOFMEMORY);
+
+	ZeroMemory( pWaveFmt , sizeof(WAVEFORMATEX) );
+	pWaveFmt->cbSize = 0 /*sizeof(WAVEFORMATEX)*/;
+	pWaveFmt->wFormatTag = WAVE_FORMAT_PCM;
+	//todo 添加详细的参数
+	pWaveFmt->nChannels = 2; //pNetSourceFilter->getWaveProp()->nChannels;   //共多少声道
+	pWaveFmt->wBitsPerSample = 16; //pNetSourceFilter->getWaveProp()->wBitsPerSample; //每个样本多少位
+	pWaveFmt->nSamplesPerSec = 22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
+
+	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
+	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
+	m_nAvgSecTime = pWaveFmt->nAvgBytesPerSec;
+
+	pMediaType->SetType(&MEDIATYPE_Audio);
+	pMediaType->SetFormatType(&FORMAT_WaveFormatEx);
+	pMediaType->SetSubtype( &MEDIASUBTYPE_PCM /*MEDIASUBTYPE_WAVE*/ );
+	pMediaType->SetTemporalCompression(FALSE);
+	pMediaType->SetSampleSize( AVCODEC_MAX_AUDIO_FRAME_SIZE * 4 );
+	return S_OK;
+}
+
+HRESULT CAudioStreamPin::ChargeMediaType()
+{
+	HRESULT hr = S_FALSE;
+	/*hr = m_pAllocator->Decommit();
+	hr = m_pAllocator->Release();
+	hr = CreateMemoryAllocator( &m_pAllocator );
+	hr =m_pAllocator->Commit();*/
+	IPinConnection *pinconn = NULL;
+	//hr = m_pInputPin->QueryInterface( IID_IPinConnection , (void**)pinconn);
+	CMediaType *type = new CMediaType;
+	IPin *pin = NULL;
+	m_pInputPin->QueryInterface( IID_IPin , (void **)&pin );
+	SetNewType(type);
+	hr = pin->QueryAccept( type );
+	//hr = pin->ReceiveConnection( (IPin*)this , type );
+	IMediaSample *psamp = NULL;
+	hr = m_pAllocator->GetBuffer(&psamp , NULL , NULL , 0);
+
+	hr = psamp->SetMediaType( type );
+	hr = m_pInputPin->NotifyAllocator( m_pAllocator , FALSE );
+	this->m_mt = *type;
+	return S_OK;
+}
+
 HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 {
+	/*if ( m_times == 0 )
+	{
+		ChargeMediaType(&pSamp);
+		m_times++;
+	}*/
 	BYTE *pData;
 	long cbData;
 	HRESULT hr = S_FALSE;
@@ -594,6 +652,7 @@ HRESULT CAudioStreamPin::OnThreadCreate(void)
 	// we need to also reset the repeat time in case the system
 	// clock is turned off after m_iRepeatTime gets very big
 	m_iRepeatTime = 10000000;
+	//ChargeMediaType();
 
 	return S_OK;
 }

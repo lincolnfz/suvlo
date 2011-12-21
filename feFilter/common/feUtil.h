@@ -3,8 +3,8 @@
 #include <Windows.h>
 class CFeLockMutex{
 public:
-	CFeLockMutex( void*& mutex ):m_Mutex(mutex){
-		WaitForSingleObject( m_Mutex , INFINITE );
+	CFeLockMutex( void*& mutex , INT32 timeout = INFINITE ):m_Mutex(mutex){
+		WaitForSingleObject( m_Mutex , timeout );
 	}
 	~CFeLockMutex(){
 		ReleaseMutex( m_Mutex );

@@ -219,6 +219,7 @@ BOOL CMainDlg::Init()
 	if ( SUCCEEDED( CoCreateInstance( CLSID_AudioRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
 	{
 		m_pFilterGraph->AddFilter( pAudioRenderFilter , filterNam[2] );
+		//pAudioRenderFilter->
 		pAudioRenderFilter->Release();
 	}
 

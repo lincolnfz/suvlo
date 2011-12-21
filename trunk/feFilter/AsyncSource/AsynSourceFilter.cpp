@@ -334,9 +334,9 @@ CAsynReader::CAsynReader(
 	TCHAR *pName,
 	LPUNKNOWN pUnk,
 	CAsyncStream *pStream,
-	HRESULT *phr):CBaseFilter( pName , pUnk , &m_csFilter , CLSID_AsynSource , NULL ), m_Io(pStream)
+	HRESULT *phr):CBaseFilter( pName , pUnk , &m_csFilter , CLSID_AsynSource , NULL ), m_Io(pStream) , 
+	m_OutputPin( phr , this , &m_Io , &m_csFilter )
 {
-	m_pOutputPin = new CAsynSourceOutPin( phr , this, &m_Io , &m_csFilter );
 	//set use media type
 	m_mt.SetType(&MEDIATYPE_Stream);
 	m_mt.SetSubtype(&MEDIASUBTYPE_NULL);
@@ -356,7 +356,7 @@ CBasePin * CAsynReader::GetPin(int n)
 {
 	if((GetPinCount() > 0) && (n == 0))
 	{
-		return m_pOutputPin;
+		return &m_OutputPin;
 	}
 	else
 	{

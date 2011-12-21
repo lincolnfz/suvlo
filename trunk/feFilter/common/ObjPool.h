@@ -7,8 +7,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 //对像
-/*
-template<class T,class N>
+template<class T>
 class CObj
 {
 public:
@@ -21,19 +20,16 @@ public:
 
 protected:
 	T m_Data;
-	N m_Da1;
-	//CObj<T> *m_pNext;
 };
 
-template<class T , class N>
-T CObj<T,N>::GetData(){
+template<class T>
+T CObj<T>::GetData(){
 	return m_Data;
 }
-*/
 
 
 //////////////////////////////////////////////////////////////////////////
-//对像队列
+//object queue
 template<class T>
 class CObjQueue{
 public:
@@ -41,7 +37,7 @@ public:
 		m_pObjQueue = NULL;
 	}
 
-	~CObjQueue(){
+	virtual ~CObjQueue(){
 		Destory();
 	}
 
@@ -74,10 +70,17 @@ public:
 
 	long Getcbsize(){ return m_cbsize; }
 	long Getcursor(){ return m_cursor; }
+	long IncCursor( long l ){ m_cursor += l; return m_cursor; }
 	void Resetcursor(){ m_cursor = 0; }
 	int GetEof(){return m_eof; }
 	void SetPosition( LONGLONG ll ){ m_position = ll; }
 	LONGLONG GetPosition(){ return m_position; }
+	T *GetData(){
+	   return &(m_pObjQueue[m_cursor]);
+    }
+	long CommitData(){
+		return IncCursor(1);
+	}
 
 protected:
 	T *m_pObjQueue;
@@ -89,13 +92,15 @@ protected:
 
 
 //////////////////////////////////////////////////////////////////////////
-//对像池
-#define GETCLASSFUN(C , F) C::*F
+//object pool
+#define GETCLASSFUN(C,F) C##::*##F
 
 template<class T>
 class CObjPool
 {
 public:
+	enum OPCMD {WRITE_DATA, READ_DATA};
+
 	CObjPool( int units , long size){
 		m_pObjCollect = NULL;
 		m_units = units;
@@ -104,7 +109,7 @@ public:
 		m_pFullList = NULL;
 		Init( m_units , m_size );
 	}
-	~CObjPool(){
+	virtual ~CObjPool(){
 		Destory();
 	}
 	int Init( int units , long size ){
@@ -167,7 +172,7 @@ public:
 			return pNode;
 		}
 		pNode->pData->Resetcursor();
-		putDataLink( m_pEmptyList , pNode );
+		putDataLink( m_pEmptyList , pNode ); //数据读完,归返给空队列
 getnew:
 		pNode = getDataLink( m_pFullList );
 		return pNode;
@@ -186,7 +191,7 @@ getnew:
 		}
 		pNode->pData->Resetcursor();
 		LONGLONG ll = pNode->pData->GetPosition();
-		putDataLink( m_pFullList , pNode );
+		putDataLink( m_pFullList , pNode ); //数据写满,归还给完成队列
 getnew:
 		pNode = getDataLink( m_pEmptyList );
 		pNode->pData->SetPosition( ll + m_size );
@@ -199,16 +204,39 @@ getnew:
 	virtual int ReadData() = 0;
 	*/
 	
+	//从对像池中得到对像
+	//
+	virtual T * GetOneUnit( OPCMD op ){
+		T *pData = NULL;
+		if ( op == READ_DATA )
+		{
+			//要一个可以读的unit
+			m_pRead = this->GetReadQueue( this->m_pRead );
+			pData = m_pRead->pData->GetData();
+			
+		}else if ( op == WRITE_DATA )
+		{
+			//要一个可以写的unit
+			m_pWrite = this->GetWriteQueue( this->m_pWrite );
+			pData = m_pWrite->pData->GetData();
+		}
+		return pData;
+	}
 
-	virtual int RequestData(){
-
+	//向池提交已操作完的对像，实际只是游标+1
+	//
+	virtual int CommitOneUnit( T *pdata , OPCMD op ){
+		if ( op == READ_DATA )
+		{			
+			this->m_pRead->pData->CommitData();
+		}else if ( op == WRITE_DATA )
+		{			
+			this->m_pWrite->pData->CommitData();
+		}
 		return 0;
 	}
 
-	virtual int FillData(){
-
-		return 0;
-	}
+	
 
 protected:
 	CObjQueue<T> *m_pObjCollect;
@@ -227,7 +255,7 @@ public:
 	{
 
 	}
-	~CExample(){
+	virtual ~CExample(){
 
 	}
 

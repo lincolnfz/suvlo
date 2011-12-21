@@ -1,12 +1,15 @@
 #pragma once
 #include "../common/DefInterface.h"
+#include "../common/bufpool.h"
+#include "../common/ObjPool.h"
 #include <pullpin.h>
+#include "WrapFFMpeg.h"
 
 class CDataPull : public CPullPin
 {
 public:
 	CDataPull();
-	~CDataPull();
+	virtual ~CDataPull();
 
 	//实现cpullpin虚函数
 	// override this to handle data arrival
@@ -31,7 +34,7 @@ class CDataInputPin : public CBasePin
 {
 public:
 	CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr );
-	~CDataInputPin();
+	virtual ~CDataInputPin();
 
 	//拉模式中调用pullpin的content
 	virtual HRESULT CheckConnect(IPin *);
@@ -58,16 +61,109 @@ protected:
 
 };
 
+class CFePushPin : public CAMThread , public CBaseOutputPin
+{
+public:
+	CFePushPin( LPCTSTR lpObjectName , CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , LPCWSTR lpName );
+	virtual ~CFePushPin();
+
+	// *
+	// * Worker Thread
+	// *
+	//以下处理工作线程
+	HRESULT Active(void);    // Starts up the worker thread
+	HRESULT Inactive(void);  // Exits the worker thread.
+
+protected:
+
+	// Override this to provide the worker thread a means
+	// of processing a buffer
+	virtual HRESULT FillBuffer(IMediaSample *pSamp) PURE;
+
+	// Called as the thread is created/destroyed - use to perform
+	// jobs such as start/stop streaming mode
+	// If OnThreadCreate returns an error the thread will exit.
+	virtual HRESULT OnThreadCreate(void) {return NOERROR;};
+	virtual HRESULT OnThreadDestroy(void) {return NOERROR;};
+	virtual HRESULT OnThreadStartPlay(void) {return NOERROR;};
+
+public:
+	// thread commands
+	enum Command {CMD_INIT, CMD_PAUSE, CMD_RUN, CMD_STOP, CMD_EXIT};
+	HRESULT Init(void) { return CAMThread::CallWorker(CMD_INIT); }
+	HRESULT Exit(void) { return CAMThread::CallWorker(CMD_EXIT); }
+	HRESULT Run(void) { return CAMThread::CallWorker(CMD_RUN); }
+	HRESULT Pause(void) { return CAMThread::CallWorker(CMD_PAUSE); }
+	HRESULT Stop(void) { return CAMThread::CallWorker(CMD_STOP); }
+
+protected:
+	Command GetRequest(void) { return (Command) CAMThread::GetRequest(); }
+	BOOL    CheckRequest(Command *pCom) { return CAMThread::CheckRequest( (DWORD *) pCom); }
+
+	// override these if you want to add thread commands
+	virtual DWORD ThreadProc(void);  		// the thread function
+
+	virtual HRESULT DoBufferProcessingLoop(void);    // the loop executed whilst running
+
+	//以上都是处理工作线程
+	//////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////
+	//以下是处理媒体格式
+public:
+	//impl CBaseOutputPin
+	virtual HRESULT DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest)PURE;
+	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType){ return CBaseOutputPin::GetMediaType( iPosition , pMediaType ); }
+	virtual HRESULT SetMediaType(const CMediaType *pmt){ return CBaseOutputPin::SetMediaType(pmt); }
+	//STDMETHODIMP EndOfStream(void);
+	//STDMETHODIMP BeginFlush(void);
+	//STDMETHODIMP EndFlush(void);
+
+	//impl CBasePin
+	virtual HRESULT CheckMediaType(const CMediaType *)PURE;
+
+protected:
+	CCritSec *m_pLock;
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+class CVideoOutPin : public CFePushPin
+{
+public:
+	CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr );
+	~CVideoOutPin();
+
+	virtual HRESULT FillBuffer(IMediaSample *pSamp);
+
+	//impl CBaseOutputPin
+	virtual HRESULT DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest);
+	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
+	virtual HRESULT SetMediaType(const CMediaType *);
+	STDMETHODIMP EndOfStream(void);
+	STDMETHODIMP BeginFlush(void);
+	STDMETHODIMP EndFlush(void);
+
+	//impl CBasePin
+	virtual HRESULT CheckMediaType(const CMediaType *);
+};
+
+//分析filter,主要进行解码工作
 class CParseFilter : public CBaseFilter
 {
 protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
-	CDataInputPin *m_pDataInputPin;
+	CDataInputPin m_DataInputPin;
+	CVideoOutPin m_VideoOutPin;
+	CWrapFFMpeg m_ffmpeg;
+
+	BITMAPFILEHEADER m_bmpHead;
+	WAVEFORMATEX m_waveFmt;
 
 public:
 	CParseFilter(LPUNKNOWN pUnk, HRESULT *phr);
-	~CParseFilter(void);
+	virtual ~CParseFilter(void);
 
 	static CUnknown * WINAPI CreateInstance(LPUNKNOWN, HRESULT *);
 

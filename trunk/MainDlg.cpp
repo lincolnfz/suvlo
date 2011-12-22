@@ -216,10 +216,12 @@ BOOL CMainDlg::Init()
 	}
 
 	IBaseFilter *pAudioRenderFilter = NULL;
-	if ( SUCCEEDED( CoCreateInstance( CLSID_AudioRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
+	if ( SUCCEEDED( CoCreateInstance( CLSID_DSoundRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
 	{
 		m_pFilterGraph->AddFilter( pAudioRenderFilter , filterNam[2] );
 		//pAudioRenderFilter->
+		IPinConnection *pConnPin = NULL;
+		HRESULT hr = pAudioRenderFilter->QueryInterface( IID_IPinConnection , (void **)&pConnPin );
 		pAudioRenderFilter->Release();
 	}
 

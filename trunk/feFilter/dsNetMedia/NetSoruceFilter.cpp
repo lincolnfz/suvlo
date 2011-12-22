@@ -667,7 +667,7 @@ HRESULT CAudioStreamPin::Inactive(void)
 	//Sleep(500);
 	//CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 	//pNetSourceFilter->NoitfyStart(  );
-	Sleep(400);
+	//Sleep(400);
 	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 	pNetSourceFilter->m_eventStart.Set();
 	return S_OK;

@@ -4,7 +4,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 //datapull¼Ì³ÐÀà
-CDataPull::CDataPull()
+CDataPull::CDataPull(UNIT_BUF_POOL *pbufpool) : m_pbufpool(pbufpool)
 {
 }
 
@@ -18,6 +18,7 @@ HRESULT CDataPull::Receive(IMediaSample* pSample)
 	long lActualDateLen = pSample->GetActualDataLength();
 	BYTE *pbyte = NULL;
 	pSample->GetPointer( &pbyte );
+	WriteData( m_pbufpool , (char*)pbyte , lActualDateLen );
 	return S_OK;
 }
 
@@ -43,8 +44,8 @@ HRESULT CDataPull::EndFlush()
 
 //////////////////////////////////////////////////////////////////////////
 //dataInputPin
-CDataInputPin::CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr )
-	:CBasePin( NAME("parser input pin") , pFilter , pLock , phr , L"Input" , PINDIR_INPUT )
+CDataInputPin::CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool )
+	:CBasePin( NAME("parser input pin") , pFilter , pLock , phr , L"Input" , PINDIR_INPUT ) , m_pullPin( pbufpool )
 {
 	
 }
@@ -390,14 +391,16 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 //////////////////////////////////////////////////////////////////////////
 //parserFilter
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
-	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
-	m_DataInputPin( this, &m_csFilter , phr ) , m_VideoOutPin( this, &m_csFilter , phr )
+	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ), m_ffmpeg(&m_bufpool),
+	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool ) , m_VideoOutPin( this, &m_csFilter , phr )
 {
+	InitPool( &m_bufpool , 10 , 131072 );
 }
 
 
 CParseFilter::~CParseFilter(void)
 {
+	DestoryPool( &m_bufpool );
 }
 
 CUnknown * WINAPI CParseFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)

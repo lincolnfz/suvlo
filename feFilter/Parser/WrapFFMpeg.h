@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <limits.h>
+#include "../common/bufpool.h"
 
 extern "C"
 {
@@ -246,8 +247,10 @@ protected:
 
 	VideoState* m_pVideoState;
 
+	UNIT_BUF_POOL* m_pBufpool;
+
 public:
-	CWrapFFMpeg(void);
+	CWrapFFMpeg(UNIT_BUF_POOL *);
 	virtual ~CWrapFFMpeg(void);
 	
 	char* getCycleBuf(){ return m_cycle_head; }
@@ -262,6 +265,8 @@ public:
 	*¶ÁÈ¡ÄÚ´æ
 	**/
 	int ReadBuf( char* destbuf , int len );
+
+	int ReadBuf2(char* destbuf , int len);
 
 
 	void DeCodec( char* , int );

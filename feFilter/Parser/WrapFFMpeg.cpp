@@ -112,7 +112,8 @@ int mem_open(URLContext *h, const char *url, int flags)
 int mem_read(URLContext *h, unsigned char *buf, int size)
 {
 	CWrapFFMpeg* pFFMpeg = (CWrapFFMpeg*)h->priv_data;
-	return pFFMpeg->ReadBuf( (char*)buf , size );
+	//return pFFMpeg->ReadBuf( (char*)buf , size );
+	return pFFMpeg->ReadBuf2( (char*)buf , size );
 }
 
 int mem_get_handle(URLContext *h)
@@ -132,7 +133,7 @@ void init_new_protocol()
 
 }
 
-CWrapFFMpeg::CWrapFFMpeg(void)
+CWrapFFMpeg::CWrapFFMpeg(UNIT_BUF_POOL *pBufpool) : m_pBufpool(pBufpool)
 {
 	InitializeCriticalSection(&m_calcSection);
 	Init();
@@ -304,6 +305,11 @@ int CWrapFFMpeg::ReadBuf( char* destbuf , int len )
 	ReleaseMutex( m_hOpMemLock );
 	SetEvent( m_hScrapMemEvent );
 	return readlen;
+}
+
+int CWrapFFMpeg::ReadBuf2(char* destbuf , int len)
+{
+	return ReadData( m_pBufpool , destbuf , len );
 }
 
 //数据包队列处理

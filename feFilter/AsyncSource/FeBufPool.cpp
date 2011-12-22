@@ -3,7 +3,7 @@
 #include "FeBufPool.h"
 
 
-CFeBufPool::CFeBufPool(int units/* = 10*/ , long size/* = 65536*/)
+CFeBufPool::CFeBufPool(int units/* = 10*/ , long size/* = 131072*/)
 {
 	//m_poolbuf = NULL;
 	InitPool( &m_poolbuf , units , size );

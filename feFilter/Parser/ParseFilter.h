@@ -8,7 +8,7 @@
 class CDataPull : public CPullPin
 {
 public:
-	CDataPull();
+	CDataPull( UNIT_BUF_POOL *pbufpool );
 	virtual ~CDataPull();
 
 	//实现cpullpin虚函数
@@ -28,12 +28,15 @@ public:
 	// flush this pin and all downstream
 	virtual HRESULT BeginFlush();
 	virtual HRESULT EndFlush();
+
+protected:
+	UNIT_BUF_POOL *m_pbufpool;
 };
 
 class CDataInputPin : public CBasePin
 {
 public:
-	CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr );
+	CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool );
 	virtual ~CDataInputPin();
 
 	//拉模式中调用pullpin的content
@@ -132,7 +135,7 @@ class CVideoOutPin : public CFePushPin
 {
 public:
 	CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr );
-	~CVideoOutPin();
+	virtual ~CVideoOutPin();
 
 	virtual HRESULT FillBuffer(IMediaSample *pSamp);
 
@@ -160,7 +163,8 @@ protected:
 
 	BITMAPFILEHEADER m_bmpHead;
 	WAVEFORMATEX m_waveFmt;
-
+	UNIT_BUF_POOL m_bufpool;
+	//CObjPool<>
 public:
 	CParseFilter(LPUNKNOWN pUnk, HRESULT *phr);
 	virtual ~CParseFilter(void);

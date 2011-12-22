@@ -471,6 +471,7 @@ CAudioStreamPin::CAudioStreamPin(HRESULT *phr, CSource *pFilter)
 	:CSourceStream(NAME("Push net Source"), phr, pFilter, L"Audio_Out")
 {
 	m_times = 0;
+	m_nSamplesPerSec = 44100;
 }
 
 CAudioStreamPin::~CAudioStreamPin()
@@ -480,6 +481,7 @@ CAudioStreamPin::~CAudioStreamPin()
 
 HRESULT CAudioStreamPin::SetNewType( CMediaType *pMediaType )
 {
+	m_nSamplesPerSec = 22050;
 	CheckPointer(pMediaType, E_POINTER);
 	WAVEFORMATEX *pWaveFmt = (WAVEFORMATEX*)pMediaType->AllocFormatBuffer( sizeof(WAVEFORMATEX) );
 	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
@@ -493,7 +495,7 @@ HRESULT CAudioStreamPin::SetNewType( CMediaType *pMediaType )
 	//todo 添加详细的参数
 	pWaveFmt->nChannels = 2; //pNetSourceFilter->getWaveProp()->nChannels;   //共多少声道
 	pWaveFmt->wBitsPerSample = 16; //pNetSourceFilter->getWaveProp()->wBitsPerSample; //每个样本多少位
-	pWaveFmt->nSamplesPerSec = 22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
+	pWaveFmt->nSamplesPerSec = m_nSamplesPerSec; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
 
 	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
 	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
@@ -509,6 +511,7 @@ HRESULT CAudioStreamPin::SetNewType( CMediaType *pMediaType )
 
 HRESULT CAudioStreamPin::ChargeMediaType()
 {
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
 	HRESULT hr = S_FALSE;
 	/*hr = m_pAllocator->Decommit();
 	hr = m_pAllocator->Release();
@@ -516,18 +519,30 @@ HRESULT CAudioStreamPin::ChargeMediaType()
 	hr =m_pAllocator->Commit();*/
 	IPinConnection *pinconn = NULL;
 	//hr = m_pInputPin->QueryInterface( IID_IPinConnection , (void**)pinconn);
-	CMediaType *type = new CMediaType;
+	CMediaType type;
 	IPin *pin = NULL;
 	m_pInputPin->QueryInterface( IID_IPin , (void **)&pin );
-	SetNewType(type);
-	hr = pin->QueryAccept( type );
-	//hr = pin->ReceiveConnection( (IPin*)this , type );
-	IMediaSample *psamp = NULL;
-	hr = m_pAllocator->GetBuffer(&psamp , NULL , NULL , 0);
+	SetNewType(&type);
+	hr = pin->QueryAccept( &type );
+	
+	hr = pin->Disconnect();
+	hr = pin->ReceiveConnection( (IPin*)this , &type );
 
-	hr = psamp->SetMediaType( type );
-	hr = m_pInputPin->NotifyAllocator( m_pAllocator , FALSE );
-	this->m_mt = *type;
+	IFilterGraph2 *pFilterG2 = NULL;
+	m_pFilter->GetFilterGraph()->QueryInterface( IID_IFilterGraph2 , (void **)pFilterG2 );
+	IMediaSample *psamp = NULL;
+	//hr = m_pAllocator->Decommit();
+
+	//this->GetDeliveryBuffer( &psamp , NULL , NULL , AM_GBF_NOWAIT );
+	//hr = m_pAllocator->GetBuffer(&psamp , NULL , NULL , 0);
+
+	//hr = psamp->SetMediaType( &type );
+	//AM_MEDIA_TYPE *ptype = NULL;
+	//hr = psamp->GetMediaType( &ptype );
+	//hr = m_pInputPin->NotifyAllocator( m_pAllocator , FALSE );
+	this->m_mt = type;
+	
+
 	return S_OK;
 }
 
@@ -535,8 +550,10 @@ HRESULT CAudioStreamPin::FillBuffer(IMediaSample *pSamp)
 {
 	/*if ( m_times == 0 )
 	{
-		ChargeMediaType(&pSamp);
-		m_times++;
+	pSamp->SetDiscontinuity( TRUE );
+	m_times++;
+	}else{
+	pSamp->SetDiscontinuity( FALSE );
 	}*/
 	BYTE *pData;
 	long cbData;
@@ -629,7 +646,7 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	//todo 添加详细的参数
 	pWaveFmt->nChannels = 2; //pNetSourceFilter->getWaveProp()->nChannels;   //共多少声道
 	pWaveFmt->wBitsPerSample = 16; //pNetSourceFilter->getWaveProp()->wBitsPerSample; //每个样本多少位
-	pWaveFmt->nSamplesPerSec = 22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
+	pWaveFmt->nSamplesPerSec = m_nSamplesPerSec; //22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
 
 	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
 	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
@@ -644,6 +661,20 @@ HRESULT CAudioStreamPin::GetMediaType(__inout CMediaType *pMediaType)
 	return S_OK;
 }
 
+HRESULT CAudioStreamPin::Inactive(void)
+{
+	__super::Inactive();
+	//Sleep(500);
+	//CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+	//pNetSourceFilter->NoitfyStart(  );
+	Sleep(400);
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+	pNetSourceFilter->m_eventStart.Set();
+	return S_OK;
+}
+
+CMediaType *g_audioType = NULL;
+
 HRESULT CAudioStreamPin::OnThreadCreate(void)
 {
 	CAutoLock cAutoLockShared(&m_cSharedState);
@@ -653,6 +684,18 @@ HRESULT CAudioStreamPin::OnThreadCreate(void)
 	// clock is turned off after m_iRepeatTime gets very big
 	m_iRepeatTime = 10000000;
 	//ChargeMediaType();
+	m_nSamplesPerSec = 22050;
+	g_audioType = new CMediaType();
+	this->SetNewType( g_audioType );
+	CNetSourceFilter* pNetSourceFilter = dynamic_cast<CNetSourceFilter*>(m_pFilter);
+	if ( m_times == 0 )
+	{
+		//pNetSourceFilter->NoitfyStart( TRUE );
+		pNetSourceFilter->FlowStop();
+		pNetSourceFilter->ReConnect();
+		++m_times;
+	}
+	
 
 	return S_OK;
 }
@@ -749,19 +792,29 @@ STDMETHODIMP CNetSourceFilter::NonDelegatingQueryInterface(REFIID riid, __deref_
 	
 }
 
-void CNetSourceFilter::NoitfyStart()
+void CNetSourceFilter::NoitfyStart( BOOL bRestart , CMediaType *pType )
 {
 	/************************************************************************/
 	/* 开始联接filter                                                        */
 	/************************************************************************/
 	IGraphBuilder *pGraphBuilder = NULL;
 	IFilterGraph *pFilterGraph = GetFilterGraph();
+	IMediaFilter *pIMediaFilter = NULL;
+	pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter );
+	if ( bRestart )
+	{
+		HRESULT hr = pIMediaFilter->Stop();
+		return;
+	}
+
 	BOOL bConnect = FALSE;
 	HRESULT hr = S_OK;
 	if ( pFilterGraph )
 	{
 		if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IGraphBuilder , (void **)&pGraphBuilder ) ) )
 		{
+			
+			
 			//联接videopin
 			IBaseFilter* pVideoReaderFilter = NULL;
 			if ( SUCCEEDED( pGraphBuilder->FindFilterByName( filterNam[1] , &pVideoReaderFilter ) ) )
@@ -773,10 +826,6 @@ void CNetSourceFilter::NoitfyStart()
 					if ( SUCCEEDED(hr) )
 					{
 						bConnect = TRUE;						
-						
-						/*this->Run(0);
-						this->Stop();
-						m_pVideoPin->Disconnect();*/
 					}						
 					else if ( VFW_E_CANNOT_CONNECT == hr )
 					{
@@ -794,7 +843,7 @@ void CNetSourceFilter::NoitfyStart()
 				IPin* pIPin = NULL;
 				if ( SUCCEEDED(GetUnconnectedPin( pAudioRenderFilter , PINDIR_INPUT , &pIPin )) )
 				{
-					hr = m_pAudioPin->Connect(pIPin , NULL); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
+					hr = m_pAudioPin->Connect(pIPin , pType); //pGraphBuilder->Connect( m_pVideoPin , pIPin );					
 					if ( SUCCEEDED(hr) )
 					{
 						bConnect = TRUE;						
@@ -810,25 +859,60 @@ void CNetSourceFilter::NoitfyStart()
 			//联接audiopin完成
 			
 
+			bConnect = TRUE;
 			if ( bConnect )
 			{
 				//联接成功
-				IMediaFilter *pIMediaFilter = NULL;
-				if ( SUCCEEDED( pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
-				{				
-					/*
-					IReferenceClock *pIRefClock = NULL;
-					if ( SUCCEEDED( CoCreateInstance( CLSID_SystemClock , NULL , CLSCTX_INPROC_SERVER , IID_IReferenceClock , (LPVOID*)&pIRefClock ) ) )
-					{						
-						hr = pIMediaFilter->SetSyncSource( pIRefClock );
-						pIRefClock->Release();
-					}*/
-					pIMediaFilter->Run(0); //开始播放视频
-					pIMediaFilter->Release();
-				}
+				pIMediaFilter->Run(0); //开始播放视频			
+				
 			}
 			pGraphBuilder->Release();
 		}
 	}
+	pIMediaFilter->Release();
 	//构造graph结束
+}
+
+DWORD __stdcall CNetSourceFilter::reRun( LPVOID pv )
+{
+	CNetSourceFilter* p = (CNetSourceFilter*)pv;
+	p->m_eventStart.Wait();
+	//p->NoitfyStart( FALSE , g_audioType );
+	CAudioStreamPin* pAudioPin = dynamic_cast<CAudioStreamPin*>(p->m_pAudioPin);
+	pAudioPin->ChargeMediaType();
+	p->NoitfyStart( FALSE , g_audioType );
+	return 0;
+}
+
+void CNetSourceFilter::ReConnect()
+{
+	DWORD threadid = 0;
+	HANDLE hThread = CreateThread(
+		NULL,
+		0,
+		CNetSourceFilter::reRun,
+		this,
+		0,
+		&threadid);
+	CloseHandle( hThread);
+}
+
+DWORD __stdcall CNetSourceFilter::StopThread( LPVOID pv )
+{
+	CNetSourceFilter* p = (CNetSourceFilter*)pv;
+	p->NoitfyStart( TRUE );
+	return 0;
+}
+
+void CNetSourceFilter::FlowStop()
+{
+	DWORD threadid = 0;
+	HANDLE hThread = CreateThread(
+		NULL,
+		0,
+		CNetSourceFilter::StopThread,
+		this,
+		0,
+		&threadid);
+	CloseHandle( hThread);
 }

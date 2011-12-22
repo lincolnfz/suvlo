@@ -1397,6 +1397,7 @@ unsigned __stdcall readThread( void* arg )
 		{
 			st = 1;
 			g_pNetSourceFilter->NoitfyStart();
+			
 		}
 	}
 

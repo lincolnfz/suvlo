@@ -75,6 +75,8 @@ protected:
 
 	virtual HRESULT GetMediaType(__inout CMediaType *pMediaType);
 
+	virtual HRESULT Inactive(void);
+
 protected:
 	CCritSec m_cSharedState;            // Protects our internal state
 
@@ -82,12 +84,15 @@ protected:
 	CRefTime m_rtSampleTime;            // The time stamp for each sample
 	DWORD m_nAvgSecTime;
 	int m_times;
+	int  m_nSamplesPerSec;
 
 };
 
 class CNetSourceFilter : public CSource , public INetSource
 {
 public:
+	CAMEvent m_eventStart;
+	CAMEvent m_eventStop;
 	DECLARE_IUNKNOWN
 	CNetSourceFilter(IUnknown *pUnk, HRESULT *phr);
 	virtual ~CNetSourceFilter(void);
@@ -102,7 +107,12 @@ public:
 	DataLink<VideoData> *getVideoFrameLink(){ return m_pVideoFrameLink;}
 	DataLink<AudioData> *getAudioDataLink(){return m_pAudioDataLink;}
 	WAVEFORMATEX *getWaveProp(){ return &m_waveProp; }
-	void NoitfyStart();
+	void NoitfyStart( BOOL bRestart = FALSE , CMediaType *pType = NULL);
+	void ReConnect();
+	static DWORD __stdcall reRun( LPVOID pv );
+
+	void FlowStop();
+	static DWORD __stdcall StopThread( LPVOID pv );
 protected:
 	IPin *m_pVideoPin , *m_pAudioPin;
 	CWrapmms m_wrapmms;
@@ -111,5 +121,7 @@ protected:
 	//AVFrameLink *m_pAudioFrameLink;
 	DataLink<AudioData> *m_pAudioDataLink;
 	WAVEFORMATEX m_waveProp;
+	
+	
 };
 

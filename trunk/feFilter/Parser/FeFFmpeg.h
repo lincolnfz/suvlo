@@ -56,7 +56,7 @@ protected:
 	int DoProcessingLoop();
 	//
 	int IsFlushPacket( AVPacket *pkt ){
-		return (memcmp( pkt->data , m_flush_pkt.data , 5 ) == 0) ? 1 : 0;
+		return  pkt->data == m_flush_pkt.data;
 	}
 
 

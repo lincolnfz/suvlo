@@ -90,10 +90,10 @@
     <ClInclude Include="..\common\DefInterface.h" />
     <ClInclude Include="..\common\filterUtil.h" />
     <ClInclude Include="..\common\ObjPool.h" />
+    <ClInclude Include="FeFFmpeg.h" />
     <ClInclude Include="ParseFilter.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="WrapFFMpeg.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\bufpool.cpp">
@@ -115,14 +115,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="FeFFmpeg.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="ParseFilter.cpp" />
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="WrapFFMpeg.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

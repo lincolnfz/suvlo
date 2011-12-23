@@ -391,16 +391,18 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 //////////////////////////////////////////////////////////////////////////
 //parserFilter
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
-	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ), m_ffmpeg(&m_bufpool),
+	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool ) , m_VideoOutPin( this, &m_csFilter , phr )
 {
 	InitPool( &m_bufpool , 10 , 131072 );
+	m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool );
 }
 
 
 CParseFilter::~CParseFilter(void)
 {
 	DestoryPool( &m_bufpool );
+	CFeFFmpeg::Destory();
 }
 
 CUnknown * WINAPI CParseFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)

@@ -3,7 +3,7 @@
 #include "../common/bufpool.h"
 #include "../common/ObjPool.h"
 #include <pullpin.h>
-#include "WrapFFMpeg.h"
+#include "FeFFmpeg.h"
 
 class CDataPull : public CPullPin
 {
@@ -159,7 +159,7 @@ protected:
 	CCritSec m_csFilter;
 	CDataInputPin m_DataInputPin;
 	CVideoOutPin m_VideoOutPin;
-	CWrapFFMpeg m_ffmpeg;
+	CFeFFmpeg *m_pffmpeg;
 
 	BITMAPFILEHEADER m_bmpHead;
 	WAVEFORMATEX m_waveFmt;

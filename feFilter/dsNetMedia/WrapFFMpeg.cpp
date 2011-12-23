@@ -1064,6 +1064,7 @@ int read_packet(void *opaque, uint8_t *buf, int buf_size)
 	return buf_size;
 }
 
+//这段函数已废弃
 int initcodec( char* buf, int len , AVFormatContext** pfCtx )
 {
 	int err,ret;
@@ -1233,7 +1234,7 @@ unsigned __stdcall readThread( void* arg )
 	if(genpts)
 		ic->flags |= AVFMT_FLAG_GENPTS;
 
-	av_dict_set(&codec_opts, "request_channels", "2", 0);
+	err = av_dict_set(&codec_opts, "request_channels", "2", 0);
 
 	opts = setup_find_stream_info_opts(ic, codec_opts);
 	orig_nb_streams = ic->nb_streams;
@@ -1270,19 +1271,23 @@ unsigned __stdcall readThread( void* arg )
 		}
 	} //查换文件时间位置
 
+	//查找文件的流数据格式
 	for (i = 0; i < ic->nb_streams; i++)
 		ic->streams[i]->discard = AVDISCARD_ALL;
 	if (!video_disable)
+		//查找视频流
 		st_index[AVMEDIA_TYPE_VIDEO] =
 		av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO,
 		wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
 	if (!audio_disable)
+		//查找音频流
 		st_index[AVMEDIA_TYPE_AUDIO] =
 		av_find_best_stream(ic, AVMEDIA_TYPE_AUDIO,
 		wanted_stream[AVMEDIA_TYPE_AUDIO],
 		st_index[AVMEDIA_TYPE_VIDEO],
 		NULL, 0);
 	if (!video_disable)
+		//查找字幕
 		st_index[AVMEDIA_TYPE_SUBTITLE] =
 		av_find_best_stream(ic, AVMEDIA_TYPE_SUBTITLE,
 		wanted_stream[AVMEDIA_TYPE_SUBTITLE],

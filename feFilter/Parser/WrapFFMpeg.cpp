@@ -130,7 +130,6 @@ void init_new_protocol()
 	memProtocol.url_open = mem_open;
 	memProtocol.url_read = mem_read;
 	memProtocol.url_get_file_handle = mem_get_handle;
-
 }
 
 CWrapFFMpeg::CWrapFFMpeg(UNIT_BUF_POOL *pBufpool) : m_pBufpool(pBufpool)
@@ -1060,6 +1059,7 @@ int read_packet(void *opaque, uint8_t *buf, int buf_size)
 	return buf_size;
 }
 
+//这个函数已废弃
 int initcodec( char* buf, int len , AVFormatContext** pfCtx )
 {
 	int err,ret;

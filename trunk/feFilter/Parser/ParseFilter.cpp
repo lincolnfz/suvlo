@@ -392,10 +392,11 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 //parserFilter
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
-	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool ) , m_VideoOutPin( this, &m_csFilter , phr )
+	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool ) , m_VideoOutPin( this, &m_csFilter , phr ),
+	m_picpool(5,30)
 {
 	InitPool( &m_bufpool , 10 , 131072 );
-	m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool );
+	m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool );
 }
 
 
@@ -440,4 +441,5 @@ CBasePin * CParseFilter::GetPin(int n)
 			return pin;
 		}
 	}
+	return NULL;
 }

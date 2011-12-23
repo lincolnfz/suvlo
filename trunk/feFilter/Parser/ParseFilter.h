@@ -164,6 +164,7 @@ protected:
 	BITMAPFILEHEADER m_bmpHead;
 	WAVEFORMATEX m_waveFmt;
 	UNIT_BUF_POOL m_bufpool;
+	CObjPool<AVPicture> m_picpool;
 	//CObjPool<>
 public:
 	CParseFilter(LPUNKNOWN pUnk, HRESULT *phr);

@@ -36,7 +36,7 @@ extern "C"
 class CFeFFmpeg
 {
 public:
-	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* );
+	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* , CObjPool<AVPicture>* );
 	static int Destory();
 
 	virtual ~CFeFFmpeg();
@@ -46,18 +46,29 @@ public:
 	
 
 protected:
-	CFeFFmpeg( UNIT_BUF_POOL* );
+	CFeFFmpeg( UNIT_BUF_POOL* , CObjPool<AVPicture>* );
+
+	int ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict, 
+		int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+		int widthDst , int heightDst , PixelFormat pixFmtDst );
 
 	//init audio video pool when start one new file
 	void InitPacketPool(CObjPool<AVPacket> *pool);
-	void PutPacketPool( CObjPool<AVPacket> *pool , AVPacket *pkt );
+	//void PutPacketPool( CObjPool<AVPacket> *pool , AVPacket *pkt );
 	int stream_component_open( int stream_index );
 	int stream_component_close(int stream_index);
 	int DoProcessingLoop();
 	//
 	int IsFlushPacket( AVPacket *pkt ){
-		return  pkt->data == m_flush_pkt.data;
+		return  (pkt->data == m_flush_pkt.data) ? 1 : 0 ;
 	}
+
+	int GetVideoFrame( AVFrame* );
+	int GetAudioFrame();
+	int DoVideoDecodeLoop();
+	int DoAudioDecodeLoop();
+	static unsigned int __stdcall DecodeVideoThread( void *avg );
+	static unsigned int __stdcall DecodeAudioThread( void *avg );
 
 
 protected:
@@ -66,6 +77,7 @@ protected:
 	CObjPool<AVPacket> m_audiopool;
 	char m_filenam[1024];
 	UNIT_BUF_POOL *m_pbufpool;
+	CObjPool<AVPicture> *m_picpool;
 
 	//////////////////////////////////////////////////////////////////////////
 	//以下与ffmpeg相关
@@ -74,6 +86,7 @@ protected:
 	AVStream *m_audio_st;	//音频流
 	AVStream *m_video_st; //视频流
 	AVStream *m_subtitle_st; //字幕流
+	SwsContext *m_img_convert_ctx;
 	int m_video_stream; //视频流的索引值
 	int m_audio_stream; //音频流的索引值
 	int m_subtitle_stream; //字幕索引值

@@ -253,6 +253,18 @@ protected:
 	long m_size;
 };
 
+template< class T>
+void PutDataPool( CObjPool<T> *pool , T* data )
+{
+	T *org = pool->GetOneUnit( CObjPool<T>::OPCMD::WRITE_DATA );
+	*org = *data;
+	pool->CommitOneUnit( org , CObjPool<T>::OPCMD::WRITE_DATA );
+}
+
+/**************
+/*    这里不写GetPoolData函数                                                                 
+***********************/
+
 //////////////////////////////////////////////////////////////////////////
 //示例
 class CExample : public CObjPool<char>

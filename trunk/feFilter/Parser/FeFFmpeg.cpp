@@ -172,11 +172,11 @@ AVDictionary **setup_find_stream_info_opts(AVFormatContext *s, AVDictionary *cod
 }
 
 
-CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool )
+CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool , CObjPool<AVPicture>* picpool )
 {
 	if ( CFeFFmpeg::m_pFeFFmpeg == NULL )
 	{		
-		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool);
+		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool,picpool);
 		g_pFeFFmpeg = CFeFFmpeg::m_pFeFFmpeg;
 	}
 	return CFeFFmpeg::m_pFeFFmpeg;
@@ -196,8 +196,8 @@ int CFeFFmpeg::Destory()
 	return ret;
 }
 
-CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ) : m_videopool(UNITQUEUE,UNITSIZE) ,
-	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool)
+CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ) : m_videopool(UNITQUEUE,UNITSIZE) ,
+	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool) , m_picpool(picpool)
 {
 	av_register_all();
 	avcodec_init();
@@ -225,15 +225,15 @@ int CFeFFmpeg::ReadBuf(char* destbuf , int len)
 
 void CFeFFmpeg::InitPacketPool( CObjPool<AVPacket> *pool )
 {	
-	PutPacketPool( pool , &m_flush_pkt );
+	PutDataPool( pool , &m_flush_pkt );
 }
 
-void CFeFFmpeg::PutPacketPool( CObjPool<AVPacket> *pool , AVPacket *pkt )
-{
-	AVPacket *pack = pool->GetOneUnit( CObjPool<AVPacket>::OPCMD::WRITE_DATA );
-	*pack = *pkt;
-	pool->CommitOneUnit( pack , CObjPool<AVPacket>::OPCMD::WRITE_DATA );
-}
+//void CFeFFmpeg::PutPacketPool( CObjPool<AVPacket> *pool , AVPacket *pkt )
+//{
+//	AVPacket *pack = pool->GetOneUnit( CObjPool<AVPacket>::OPCMD::WRITE_DATA );
+//	*pack = *pkt;
+//	pool->CommitOneUnit( pack , CObjPool<AVPacket>::OPCMD::WRITE_DATA );
+//}
 
 int CFeFFmpeg::Start()
 {
@@ -305,6 +305,7 @@ int CFeFFmpeg::stream_component_open( int stream_index )
 			m_audio_stream = stream_index;
 			m_audio_st = ic->streams[stream_index];
 			InitPacketPool( &m_audiopool );
+			_beginthreadex( NULL , 0 , DecodeAudioThread ,  this , 0 , 0);
 		}
         break;
     case AVMEDIA_TYPE_VIDEO:
@@ -312,6 +313,7 @@ int CFeFFmpeg::stream_component_open( int stream_index )
 			m_video_stream = stream_index;
 			m_video_st = ic->streams[stream_index];
 			InitPacketPool( &m_videopool );
+			_beginthreadex( NULL , 0 , DecodeVideoThread ,  this , 0 , 0);
 		}
         break;
     case AVMEDIA_TYPE_SUBTITLE:
@@ -387,6 +389,7 @@ unsigned int CFeFFmpeg::ReadThread( void *avg )
 int CFeFFmpeg::DoProcessingLoop()
 {
 	AVFormatContext *ic = NULL;
+	m_img_convert_ctx = NULL;
 	int err, i, ret;
 	int st_index[AVMEDIA_TYPE_NB];
 	AVPacket pkt1, *pkt = &pkt1;
@@ -487,7 +490,7 @@ int CFeFFmpeg::DoProcessingLoop()
 				pkt->data=NULL;
 				pkt->size=0;
 				pkt->stream_index = m_video_stream;
-				PutPacketPool( &m_videopool , pkt );
+				PutDataPool( &m_videopool , pkt );
 			}
 			if ( m_audio_stream >= 0 && m_audio_st->codec->codec->capabilities & CODEC_CAP_DELAY )
 			{
@@ -496,7 +499,7 @@ int CFeFFmpeg::DoProcessingLoop()
 				pkt->data=NULL;
 				pkt->size=0;
 				pkt->stream_index = m_audio_stream;
-				PutPacketPool( &m_audiopool , pkt );
+				PutDataPool( &m_audiopool , pkt );
 			}
 			eof = 0;
 			continue;
@@ -518,9 +521,9 @@ int CFeFFmpeg::DoProcessingLoop()
 			<= ((double)duration/1000000);
 
 		if (pkt->stream_index == m_audio_stream && pkt_in_play_range) {
-			PutPacketPool( &m_audiopool , pkt );
+			PutDataPool( &m_audiopool , pkt );
 		} else if (pkt->stream_index == m_video_stream && pkt_in_play_range) {
-			PutPacketPool( &m_videopool , pkt );
+			PutDataPool( &m_videopool , pkt );
 		} else if (pkt->stream_index == m_subtitle_stream && pkt_in_play_range) {
 			//ÔÝ²»Ö§³Ö²¥·Å×ÖÄ»
 			av_free_packet(pkt);
@@ -547,5 +550,118 @@ fail:
 		av_close_input_file(ic);
 	}
 
+	if (m_img_convert_ctx)
+		sws_freeContext(m_img_convert_ctx);
+
 	return 0;
 }
+
+unsigned int __stdcall CFeFFmpeg::DecodeVideoThread( void *avg )
+{
+	CFeFFmpeg *pFeFFmpeg = (CFeFFmpeg*)avg;
+	pFeFFmpeg->DoVideoDecodeLoop();
+	return 0;
+}
+
+unsigned int __stdcall CFeFFmpeg::DecodeAudioThread( void *avg )
+{
+	CFeFFmpeg *pFeFFmpeg = (CFeFFmpeg*)avg;
+	pFeFFmpeg->DoAudioDecodeLoop();
+	return 0;
+}
+
+int CFeFFmpeg::DoVideoDecodeLoop()
+{
+	AVFrame *frame= avcodec_alloc_frame();
+	int ret = 0;
+	for (;;)
+	{
+		ret = GetVideoFrame( frame );
+		if( ret < 0 ) goto end;
+	}
+
+end:
+	av_free( frame );
+	return 0;
+}
+
+
+
+int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
+{
+	int got_picture;
+	AVPacket*pkt = m_videopool.GetOneUnit( CObjPool<AVPacket>::OPCMD::READ_DATA );
+	if ( pkt == NULL )
+	{
+		return -1;
+	}
+	if ( IsFlushPacket( pkt ) )
+	{
+		//here flush pool data
+		return 0;
+	}
+	avcodec_decode_video2(m_video_st->codec, frame, &got_picture, pkt);
+	av_free_packet( pkt );
+	m_videopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
+
+	if ( got_picture )
+	{
+		int ret = 1;
+		return ret;
+	}
+
+	return 0;
+}
+
+int CFeFFmpeg::ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict, 
+	int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
+	int widthDst , int heightDst , PixelFormat pixFmtDst )
+{
+	int ret = 0;
+	*ctx = sws_getCachedContext( *ctx ,
+		widthSrc ,
+		heightSrc ,
+		pixFmtSrc , 
+		widthDst ,
+		heightDst ,
+		pixFmtDst ,  SWS_BICUBIC , NULL , NULL , NULL );
+
+	if ( *ctx )
+	{
+		ret = avpicture_alloc( pict , pixFmtDst , 
+				widthDst , 
+				heightDst);
+		//µ¹ÖÃµßµ¹µÄÍ¼Ïñ
+		/*
+		pAVFrame->data[0] = pAVFrame->data[0]+pAVFrame->linesize[0]*( g_pVideoState->video_st->codec->height-1 );
+		pAVFrame->data[1] = pAVFrame->data[1]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1;  
+		pAVFrame->data[2] = pAVFrame->data[2]+pAVFrame->linesize[0]*g_pVideoState->video_st->codec->height/4-1; 
+		pAVFrame->linesize[0] *= -1;
+		pAVFrame->linesize[1] *= -1;  
+		pAVFrame->linesize[2] *= -1;
+		*/
+		//µ¹ÖÃµßµ¹µÄÍ¼Ïñ ok
+				
+		//×ª»»³Érgb
+		if ( !ret && sws_scale( *ctx , pFrame->data , pFrame->linesize , 0 , heightSrc , pict->data , pict->linesize ) )
+		{
+			ret = 1;
+		}else{
+			ret = -1;
+		}
+				
+	}
+
+	return ret;
+}
+
+int CFeFFmpeg::DoAudioDecodeLoop()
+{
+	return 0;
+}
+
+int CFeFFmpeg::GetAudioFrame()
+{
+	return 0;
+}
+

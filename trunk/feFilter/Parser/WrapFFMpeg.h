@@ -4,6 +4,7 @@
 #include <math.h>
 #include <limits.h>
 #include "../common/bufpool.h"
+#include "../common/ObjPool.h"
 
 extern "C"
 {

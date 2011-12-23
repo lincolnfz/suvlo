@@ -111,6 +111,8 @@ public:
 	virtual ~CObjPool(){
 		Destory();
 	}
+
+protected:
 	int Init( int units , long size ){
 		m_units = units;
 		m_size = size;
@@ -203,7 +205,8 @@ getnew:
 	virtual int ReadData() = 0;
 	*/
 	
-	//从对像池中得到对像
+public:
+	//get one object from pool
 	//
 	virtual T * GetOneUnit( OPCMD op ){
 		T *pData = NULL;
@@ -232,6 +235,11 @@ getnew:
 		{			
 			this->m_pWrite->pData->CommitData();
 		}
+		return 0;
+	}
+
+	virtual int Flush()
+	{
 		return 0;
 	}
 

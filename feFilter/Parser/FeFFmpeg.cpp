@@ -600,6 +600,8 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 		//here flush pool data
 		return 0;
 	}
+
+	//得到数据放在frame中
 	avcodec_decode_video2(m_video_st->codec, frame, &got_picture, pkt);
 	av_free_packet( pkt );
 	m_videopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
@@ -609,6 +611,7 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 		int ret = 1;
 		return ret;
 	}
+	//ImgCover()
 
 	return 0;
 }
@@ -657,11 +660,24 @@ int CFeFFmpeg::ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict,
 
 int CFeFFmpeg::DoAudioDecodeLoop()
 {
+	AVFrame *frame= avcodec_alloc_frame();
+	int ret = 0;
+	for (;;)
+	{
+		GetAudioFrame( frame );
+		if( ret < 0 ) goto end;
+	}
+
+end:
+	av_free( frame );
 	return 0;
 }
 
-int CFeFFmpeg::GetAudioFrame()
+int CFeFFmpeg::GetAudioFrame(AVFrame *frame)
 {
+	AVPacket*pkt = m_audiopool.GetOneUnit( CObjPool<AVPacket>::OPCMD::READ_DATA );
+
+	m_audiopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
 	return 0;
 }
 

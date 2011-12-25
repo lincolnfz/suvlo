@@ -64,7 +64,7 @@ protected:
 	}
 
 	int GetVideoFrame( AVFrame* );
-	int GetAudioFrame();
+	int GetAudioFrame(AVFrame *);
 	int DoVideoDecodeLoop();
 	int DoAudioDecodeLoop();
 	static unsigned int __stdcall DecodeVideoThread( void *avg );

@@ -176,7 +176,7 @@ class CAsynSourceFilter : public CAsynReader , public IFeFileSource
 protected:
 	CFeBufPool m_feBufPool;
 	CWrapmms m_wrapmms;
-	//上面两个变量顺序不能颠倒
+	//上面两个变量顺序不能颠倒?,应该是可以
 
 public:
 	CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr);

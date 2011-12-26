@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <limits.h>
+#include <streams.h>
 #include "../common/bufpool.h"
 #include "../common/ObjPool.h"
 
@@ -32,11 +33,20 @@ extern "C"
 # include "libavfilter/avfiltergraph.h"
 # include "libavfilter/buffersink.h"
 }
+ 
+extern const int UNITQUEUE;
+extern const long UNITSIZE;
+
+struct AUDIO_PACK
+{
+	DECLARE_ALIGNED(16,uint8_t,audio_buf2)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
+	long samplesize;
+};
 
 class CFeFFmpeg
 {
 public:
-	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* , CObjPool<AVPicture>* );
+	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt);
 	static int Destory();
 
 	virtual ~CFeFFmpeg();
@@ -46,7 +56,7 @@ public:
 	
 
 protected:
-	CFeFFmpeg( UNIT_BUF_POOL* , CObjPool<AVPicture>* );
+	CFeFFmpeg( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt );
 
 	int ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict, 
 		int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
@@ -78,6 +88,10 @@ protected:
 	char m_filenam[1024];
 	UNIT_BUF_POOL *m_pbufpool;
 	CObjPool<AVPicture> *m_picpool;
+	CObjPool<AUDIO_PACK> *m_sampleAudiopool;
+	VIDEOINFO *m_pVideoInfo;
+	WAVEFORMATEX *m_waveFmt;
+	GUID *m_pDstFmt;
 
 	//////////////////////////////////////////////////////////////////////////
 	//以下与ffmpeg相关
@@ -86,7 +100,7 @@ protected:
 	AVStream *m_audio_st;	//音频流
 	AVStream *m_video_st; //视频流
 	AVStream *m_subtitle_st; //字幕流
-	SwsContext *m_img_convert_ctx;
+	SwsContext *m_img_convert_ctx; //变换图片
 	int m_video_stream; //视频流的索引值
 	int m_audio_stream; //音频流的索引值
 	int m_subtitle_stream; //字幕索引值

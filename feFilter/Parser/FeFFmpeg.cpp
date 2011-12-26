@@ -2,7 +2,9 @@
 #include <assert.h>
 #include <process.h>
 #include <crtdbg.h>
+#include <wmsdkidl.h>
 #include "FeFFmpeg.h"
+
 
 #pragma comment( lib , "../../lib/avcodec.lib" )
 #pragma comment( lib , "../../lib/avdevice.lib" )
@@ -171,12 +173,37 @@ AVDictionary **setup_find_stream_info_opts(AVFormatContext *s, AVDictionary *cod
 	return opts;
 }
 
+PixelFormat TransFmt( GUID *SubType ){
+	PixelFormat piexlformat = PIX_FMT_RGB24;
+	if( IsEqualGUID(*SubType , WMMEDIASUBTYPE_I420 ) )
+	{
+		
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB32 ) )
+	{
+		piexlformat = PIX_FMT_RGB32;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB24 ) )
+	{
+		piexlformat = PIX_FMT_RGB24;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB565 ) )
+	{
+		piexlformat = PIX_FMT_RGB565;
+	}
+	else if ( IsEqualGUID(*SubType , WMMEDIASUBTYPE_RGB555 ) )
+	{
+		piexlformat = PIX_FMT_RGB555;
+	}
+	return piexlformat;
+}
 
-CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool , CObjPool<AVPicture>* picpool )
+
+CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool , CObjPool<AVPicture>* picpool , CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo , WAVEFORMATEX* wave , GUID* dstFmt)
 {
 	if ( CFeFFmpeg::m_pFeFFmpeg == NULL )
 	{		
-		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool,picpool);
+		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool,picpool,audiopool,videoinfo,wave,dstFmt);
 		g_pFeFFmpeg = CFeFFmpeg::m_pFeFFmpeg;
 	}
 	return CFeFFmpeg::m_pFeFFmpeg;
@@ -196,8 +223,8 @@ int CFeFFmpeg::Destory()
 	return ret;
 }
 
-CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ) : m_videopool(UNITQUEUE,UNITSIZE) ,
-	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool) , m_picpool(picpool)
+CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ,CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo, WAVEFORMATEX* wave , GUID* dstFmt) : m_videopool(UNITQUEUE,UNITSIZE) ,
+	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool) , m_picpool(picpool) , m_sampleAudiopool(audiopool) , m_pVideoInfo(videoinfo) , m_waveFmt(wave) , m_pDstFmt(dstFmt)
 {
 	av_register_all();
 	avcodec_init();
@@ -304,6 +331,14 @@ int CFeFFmpeg::stream_component_open( int stream_index )
         {
 			m_audio_stream = stream_index;
 			m_audio_st = ic->streams[stream_index];
+			m_waveFmt->cbSize = 0;
+			m_waveFmt->wFormatTag = WAVE_FORMAT_PCM;
+			m_waveFmt->nChannels = m_audio_st->codec->channels; //2
+			m_waveFmt->wBitsPerSample = m_audio_st->codec->bits_per_coded_sample; //样本位深
+			m_waveFmt->nSamplesPerSec = m_audio_st->codec->sample_rate;//每秒采样平率
+			
+			m_waveFmt->nBlockAlign = m_waveFmt->nChannels * m_waveFmt->wBitsPerSample / 8;
+			m_waveFmt->nAvgBytesPerSec = m_waveFmt->nBlockAlign * m_waveFmt->nSamplesPerSec; 
 			InitPacketPool( &m_audiopool );
 			_beginthreadex( NULL , 0 , DecodeAudioThread ,  this , 0 , 0);
 		}
@@ -312,6 +347,9 @@ int CFeFFmpeg::stream_component_open( int stream_index )
 		{
 			m_video_stream = stream_index;
 			m_video_st = ic->streams[stream_index];
+			m_pVideoInfo->bmiHeader.biWidth = m_video_st->codec->width;
+			m_pVideoInfo->bmiHeader.biHeight = m_video_st->codec->height;
+			m_pVideoInfo->AvgTimePerFrame = (REFERENCE_TIME)((double)UNITS / (double)( (double)m_video_st->r_frame_rate.num / (double)m_video_st->r_frame_rate.den));
 			InitPacketPool( &m_videopool );
 			_beginthreadex( NULL , 0 , DecodeVideoThread ,  this , 0 , 0);
 		}
@@ -572,12 +610,13 @@ unsigned int __stdcall CFeFFmpeg::DecodeAudioThread( void *avg )
 
 int CFeFFmpeg::DoVideoDecodeLoop()
 {
-	AVFrame *frame= avcodec_alloc_frame();
+	AVFrame *frame= avcodec_alloc_frame();	
 	int ret = 0;
 	for (;;)
 	{
 		ret = GetVideoFrame( frame );
 		if( ret < 0 ) goto end;
+		
 	}
 
 end:
@@ -598,6 +637,8 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 	if ( IsFlushPacket( pkt ) )
 	{
 		//here flush pool data
+		avcodec_flush_buffers(m_video_st->codec);
+		av_free_packet( pkt );
 		return 0;
 	}
 
@@ -611,7 +652,12 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 		int ret = 1;
 		return ret;
 	}
-	//ImgCover()
+	AVPicture apic;
+	if( ImgCover( &m_img_convert_ctx , frame , &apic , frame->width , frame->height , 
+		m_video_st->codec->pix_fmt , m_pVideoInfo->bmiHeader.biWidth , m_pVideoInfo->bmiHeader.biHeight , TransFmt( m_pDstFmt )  ) > 0 )
+	{
+		PutDataPool( m_picpool , &apic );
+	}
 
 	return 0;
 }
@@ -660,14 +706,20 @@ int CFeFFmpeg::ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict,
 
 int CFeFFmpeg::DoAudioDecodeLoop()
 {
-	AVFrame *frame= avcodec_alloc_frame();
+	AVFrame *frame= NULL;
 	int ret = 0;
 	for (;;)
 	{
+		if ( frame == NULL )
+		{
+			frame = avcodec_alloc_frame();
+		}else{
+			avcodec_get_frame_defaults( frame );
+		}
 		GetAudioFrame( frame );
 		if( ret < 0 ) goto end;
 	}
-
+	
 end:
 	av_free( frame );
 	return 0;
@@ -675,8 +727,62 @@ end:
 
 int CFeFFmpeg::GetAudioFrame(AVFrame *frame)
 {
+	AVPacket audio_pkt_temp ;
+	memset( &audio_pkt_temp , 0 , sizeof(AVPacket) );
+	AVPacket *pkt_temp = &audio_pkt_temp;
 	AVPacket*pkt = m_audiopool.GetOneUnit( CObjPool<AVPacket>::OPCMD::READ_DATA );
+	*pkt_temp = *pkt;
+	int new_packet = 1;
+	int flush_complete = 0;
+	AVCodecContext *dec= m_audio_st->codec;
+	int len1, len2, data_size, resampled_data_size;
+	int64_t dec_channel_layout;
+	int got_frame;
+	if ( IsFlushPacket( pkt ) )
+	{
+		avcodec_flush_buffers(m_audio_st->codec);
+		goto end;
+	}
 
+	while (pkt_temp->size > 0 || (!pkt_temp->data && new_packet)) {
+		if (flush_complete)
+			break;
+		new_packet = 0;
+		len1 = avcodec_decode_audio4(dec, frame, &got_frame, pkt_temp);
+		if (len1 < 0) {
+			/* if error, we skip the frame */
+			pkt_temp->size = 0;
+			break;
+		}
+
+		pkt_temp->data += len1;
+		pkt_temp->size -= len1;
+
+		if (!got_frame) {
+			/* stop sending empty packets if the decoder is finished */
+			if (!pkt_temp->data && dec->codec->capabilities & CODEC_CAP_DELAY)
+				flush_complete = 1;
+			continue;
+		}
+
+		//frame 这里得到的是音频pcm数据,存放在 frame->data[0]
+		//
+		data_size = av_samples_get_buffer_size(NULL, dec->channels,
+			frame->nb_samples,
+			dec->sample_fmt, 1);
+
+		dec_channel_layout = (dec->channel_layout && dec->channels == av_get_channel_layout_nb_channels(dec->channel_layout)) ? dec->channel_layout : av_get_default_channel_layout(dec->channels);
+
+		/************************************************************************/
+		/* 这里不进行到目标的格式转换                                                                    
+		/************************************************************************/
+
+		resampled_data_size = data_size;
+	}
+
+end:
+	if (pkt->data)
+		av_free_packet(pkt);
 	m_audiopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
 	return 0;
 }

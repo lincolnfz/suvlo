@@ -43,9 +43,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="defhead.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="AsynSourceFilter.h">
       <Filter>头文件</Filter>
     </ClInclude>

@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <streams.h>
-#include "defhead.h"
+#include "../common/DefInterface.h"
 #include "AsynSourceFilter.h"
 
 CAsynSourceOutPin::CAsynSourceOutPin(HRESULT * phr, CAsynReader *pReader ,CAsyncIo *pIo, CCritSec * pLock)

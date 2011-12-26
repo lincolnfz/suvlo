@@ -27,7 +27,14 @@
 #define AVUTIL_MEM_H
 
 #include "attributes.h"
+#include "error.h"
 #include "avutil.h"
+
+/**
+ * @addtogroup lavu_mem
+ * @{
+ */
+
 
 #if defined(__INTEL_COMPILER) && __INTEL_COMPILER < 1110 || defined(__SUNPRO_C)
     #define DECLARE_ALIGNED(n,t,v)      t __attribute__ ((aligned (n))) v
@@ -87,6 +94,16 @@ void *av_malloc(size_t size) av_malloc_attrib av_alloc_size(1);
 void *av_realloc(void *ptr, size_t size) av_alloc_size(2);
 
 /**
+ * Allocate or reallocate a block of memory.
+ * This function does the same thing as av_realloc, except:
+ * - It takes two arguments and checks the result of the multiplication for
+ *   integer overflow.
+ * - It frees the input block in case of failure, thus avoiding the memory
+ *   leak with the classic "buf = realloc(buf); if (!buf) return -1;".
+ */
+void *av_realloc_f(void *ptr, size_t nelem, size_t elsize);
+
+/**
  * Free a memory block which has been allocated with av_malloc(z)() or
  * av_realloc().
  * @param ptr Pointer to the memory block which should be freed.
@@ -143,5 +160,29 @@ void av_freep(void *ptr);
  * @param elem    Element to be added.
  */
 void av_dynarray_add(void *tab_ptr, int *nb_ptr, void *elem);
+
+/**
+ * Multiply two size_t values checking for overflow.
+ * @return  0 if success, AVERROR(EINVAL) if overflow.
+ */
+static inline int av_size_mult(size_t a, size_t b, size_t *r)
+{
+    size_t t = a * b;
+    /* Hack inspired from glibc: only try the division if nelem and elsize
+     * are both greater than sqrt(SIZE_MAX). */
+    if ((a | b) >= ((size_t)1 << (sizeof(size_t) * 4)) && a && t / a != b)
+        return AVERROR(EINVAL);
+    *r = t;
+    return 0;
+}
+
+/**
+ * Set the maximum size that may me allocated in one block.
+ */
+void av_max_alloc(size_t max);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_MEM_H */

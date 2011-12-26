@@ -29,8 +29,8 @@
 #include "libavutil/rational.h"
 
 #define LIBAVFILTER_VERSION_MAJOR  2
-#define LIBAVFILTER_VERSION_MINOR 43
-#define LIBAVFILTER_VERSION_MICRO  5
+#define LIBAVFILTER_VERSION_MINOR 53
+#define LIBAVFILTER_VERSION_MICRO 100
 
 #define LIBAVFILTER_VERSION_INT AV_VERSION_INT(LIBAVFILTER_VERSION_MAJOR, \
                                                LIBAVFILTER_VERSION_MINOR, \
@@ -41,10 +41,10 @@
 #define LIBAVFILTER_BUILD       LIBAVFILTER_VERSION_INT
 
 #ifndef FF_API_OLD_VSINK_API
-#define FF_API_OLD_VSINK_API        (LIBAVUTIL_VERSION_MAJOR < 3)
+#define FF_API_OLD_VSINK_API        (LIBAVFILTER_VERSION_MAJOR < 3)
 #endif
 #ifndef FF_API_OLD_ALL_FORMATS_API
-#define FF_API_OLD_ALL_FORMATS_API (LIBAVUTIL_VERSION_MAJOR < 3)
+#define FF_API_OLD_ALL_FORMATS_API (LIBAVFILTER_VERSION_MAJOR < 3)
 #endif
 
 #include <stddef.h>
@@ -100,6 +100,9 @@ typedef struct AVFilterBuffer {
 #define AV_PERM_REUSE    0x08   ///< can output the buffer multiple times, with the same contents each time
 #define AV_PERM_REUSE2   0x10   ///< can output the buffer multiple times, modified each time
 #define AV_PERM_NEG_LINESIZES 0x20  ///< the buffer requested can have negative linesizes
+#define AV_PERM_ALIGN    0x40   ///< the buffer must be aligned
+
+#define AVFILTER_ALIGN 16 //not part of ABI
 
 /**
  * Audio specific properties in a reference to an AVFilterBuffer. Since
@@ -107,7 +110,7 @@ typedef struct AVFilterBuffer {
  * per reference properties must be separated out.
  */
 typedef struct AVFilterBufferRefAudioProps {
-    int64_t channel_layout;     ///< channel layout of audio buffer
+    uint64_t channel_layout;    ///< channel layout of audio buffer
     int nb_samples;             ///< number of audio samples per channel
     int sample_rate;            ///< audio buffer sample rate
     int planar;                 ///< audio buffer - planar or packed
@@ -301,7 +304,7 @@ AVFilterFormats *avfilter_merge_formats(AVFilterFormats *a, AVFilterFormats *b);
 
 /**
  * Add *ref as a new reference to formats.
- * That is the pointers will point like in the ascii art below:
+ * That is the pointers will point like in the ASCII art below:
  *   ________
  *  |formats |<--------.
  *  |  ____  |     ____|___________________
@@ -358,8 +361,7 @@ struct AVFilterPad {
     const char *name;
 
     /**
-     * AVFilterPad type. Only video supported now, hopefully someone will
-     * add audio in the future.
+     * AVFilterPad type. Can be AVMEDIA_TYPE_VIDEO or AVMEDIA_TYPE_AUDIO.
      */
     enum AVMediaType type;
 
@@ -576,7 +578,7 @@ typedef struct AVFilter {
      * @param arg    the argument for the command
      * @param res    a buffer with size res_size where the filter(s) can return a response. This must not change when the command is not supported.
      * @param flags  if AVFILTER_CMD_FLAG_FAST is set and the command would be
-     *               timeconsuming then a filter should treat it like an unsupported command
+     *               time consuming then a filter should treat it like an unsupported command
      *
      * @returns >=0 on success otherwise an error code.
      *          AVERROR(ENOSYS) on unsupported commands
@@ -586,7 +588,7 @@ typedef struct AVFilter {
 
 /** An instance of a filter */
 struct AVFilterContext {
-    const AVClass *av_class;              ///< needed for av_log()
+    const AVClass *av_class;        ///< needed for av_log()
 
     AVFilter *filter;               ///< the AVFilter of which this is an instance
 
@@ -638,7 +640,7 @@ struct AVFilterLink {
     int h;                      ///< agreed upon image height
     AVRational sample_aspect_ratio; ///< agreed upon sample aspect ratio
     /* These parameters apply only to audio */
-    int64_t channel_layout;     ///< channel layout of current buffer (see libavutil/audioconvert.h)
+    uint64_t channel_layout;    ///< channel layout of current buffer (see libavutil/audioconvert.h)
 #if LIBAVFILTER_VERSION_MAJOR < 3
     int64_t sample_rate;        ///< samples per second
 #else
@@ -769,8 +771,7 @@ AVFilterBufferRef *avfilter_get_audio_buffer(AVFilterLink *link, int perms,
 AVFilterBufferRef *
 avfilter_get_audio_buffer_ref_from_arrays(uint8_t *data[8], int linesize[8], int perms,
                                           int nb_samples, enum AVSampleFormat sample_fmt,
-                                          int64_t channel_layout, int planar);
-
+                                          uint64_t channel_layout, int planar);
 /**
  * Request an input frame from the filter at the other end of the link.
  *
@@ -789,7 +790,7 @@ int avfilter_request_frame(AVFilterLink *link);
 int avfilter_poll_frame(AVFilterLink *link);
 
 /**
- * Notifie the next filter of the start of a frame.
+ * Notify the next filter of the start of a frame.
  *
  * @param link   the output link the frame will be sent over
  * @param picref A reference to the frame about to be sent. The data for this
@@ -800,7 +801,7 @@ int avfilter_poll_frame(AVFilterLink *link);
 void avfilter_start_frame(AVFilterLink *link, AVFilterBufferRef *picref);
 
 /**
- * Notifie the next filter that the current frame has finished.
+ * Notify the next filter that the current frame has finished.
  *
  * @param link the output link the frame was sent over
  */
@@ -828,7 +829,7 @@ void avfilter_draw_slice(AVFilterLink *link, int y, int h, int slice_dir);
 
 /**
  * Make the filter instance process a command.
- * It is recommanded to use avfilter_graph_send_command().
+ * It is recommended to use avfilter_graph_send_command().
  */
 int avfilter_process_command(AVFilterContext *filter, const char *cmd, const char *arg, char *res, int res_len, int flags);
 
@@ -842,7 +843,7 @@ int avfilter_process_command(AVFilterContext *filter, const char *cmd, const cha
  */
 void avfilter_filter_samples(AVFilterLink *link, AVFilterBufferRef *samplesref);
 
-/** Initialize the filter system. Register all builtin filters. */
+/** Initialize the filter system. Register all built-in filters. */
 void avfilter_register_all(void);
 
 /** Uninitialize the filter system. Unregister all filters. */
@@ -855,7 +856,7 @@ void avfilter_uninit(void);
  * registered.
  *
  * @param filter the filter to register
- * @return 0 if the registration was succesfull, a negative value
+ * @return 0 if the registration was successful, a negative value
  * otherwise
  */
 int avfilter_register(AVFilter *filter);

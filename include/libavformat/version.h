@@ -21,11 +21,17 @@
 #ifndef AVFORMAT_VERSION_H
 #define AVFORMAT_VERSION_H
 
+/**
+ * @file
+ * @ingroup libavf
+ * Libavformat version macros
+ */
+
 #include "libavutil/avutil.h"
 
 #define LIBAVFORMAT_VERSION_MAJOR 53
-#define LIBAVFORMAT_VERSION_MINOR 13
-#define LIBAVFORMAT_VERSION_MICRO  0
+#define LIBAVFORMAT_VERSION_MINOR 28
+#define LIBAVFORMAT_VERSION_MICRO 100
 
 #define LIBAVFORMAT_VERSION_INT AV_VERSION_INT(LIBAVFORMAT_VERSION_MAJOR, \
                                                LIBAVFORMAT_VERSION_MINOR, \
@@ -88,6 +94,39 @@
 #endif
 #ifndef FF_API_TIMESTAMP
 #define FF_API_TIMESTAMP               (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_FILESIZE
+#define FF_API_FILESIZE                (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_MUXRATE
+#define FF_API_MUXRATE                 (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_RTSP_URL_OPTIONS
+#define FF_API_RTSP_URL_OPTIONS        (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_NEW_STREAM
+#define FF_API_NEW_STREAM              (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_PRELOAD
+#define FF_API_PRELOAD                 (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_STREAM_COPY
+#define FF_API_STREAM_COPY             (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_SEEK_PUBLIC
+#define FF_API_SEEK_PUBLIC             (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_REORDER_PRIVATE
+#define FF_API_REORDER_PRIVATE         (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_OLD_INTERRUPT_CB
+#define FF_API_OLD_INTERRUPT_CB        (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_SET_PTS_INFO
+#define FF_API_SET_PTS_INFO            (LIBAVFORMAT_VERSION_MAJOR < 54)
+#endif
+#ifndef FF_API_CLOSE_INPUT_FILE
+#define FF_API_CLOSE_INPUT_FILE        (LIBAVFORMAT_VERSION_MAJOR < 54)
 #endif
 
 #endif /* AVFORMAT_VERSION_H */

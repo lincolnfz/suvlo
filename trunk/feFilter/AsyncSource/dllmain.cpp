@@ -1,7 +1,7 @@
 // dllmain.cpp : 定义 DLL 应用程序的入口点。
 #include <streams.h>
 #include <initguid.h>
-#include "defhead.h"
+#include "../common/DefInterface.h"
 #include "AsynSourceFilter.h"
 
 #define g_wszAsynSourceFilter L"Asyn Source Filter"

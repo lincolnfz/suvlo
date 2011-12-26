@@ -20,6 +20,7 @@ public:
 public:
 	friend unsigned int __stdcall run( void* parm );
 	BOOL Init();
+	BOOL Init2();
 	BOOL Clean();
 
 	BK_NOTIFY_MAP(IDC_RICHVIEW_WIN)
@@ -58,6 +59,7 @@ public:
 
 protected:
 	HINSTANCE m_hdll_source;
+	HINSTANCE m_hdll_parse;
 	//IGraphBuilder *m_pGraphBuilder;
 	IFilterGraph *m_pFilterGraph;
 

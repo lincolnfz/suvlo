@@ -100,7 +100,6 @@
     <ClInclude Include="..\common\ObjPool.h" />
     <ClInclude Include="asyncio.h" />
     <ClInclude Include="AsynSourceFilter.h" />
-    <ClInclude Include="defhead.h" />
     <ClInclude Include="FeBufPool.h" />
     <ClInclude Include="Wrapmms.h" />
   </ItemGroup>

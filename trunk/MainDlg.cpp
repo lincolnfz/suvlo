@@ -1,11 +1,14 @@
 #include "StdAfx.h"
 #include "MainDlg.h"
 #include <bkwin/bkcolor.h>
+#include "feFilter/common/DefInterface.h"
 
 WCHAR filterNam[][20]={
 	L"dsNetMedia",
 	L"ViderRender",
-	L"AudioRender"
+	L"AudioRender",
+	L"AsyncIO",
+	L"Parser"
 };
 
 CMainDlg* pMainDlg = NULL;
@@ -33,7 +36,7 @@ CMainDlg::CMainDlg(void):CBkDialogImpl<CMainDlg>(IDR_BK_MAIN_DIALOG)
 	BkFontPool::SetDefaultFont(0, -12); // 设置字体
 	BkSkin::LoadSkins(IDR_BK_SKIN_DEF); // 加载皮肤
 	BkStyle::LoadStyles(IDR_BK_STYLE_DEF); // 加载风格
-	Init();
+	Init2();
 }
 
 
@@ -240,6 +243,106 @@ BOOL CMainDlg::Init()
 	return TRUE;
 }
 
+BOOL CMainDlg::Init2()
+{
+	HRESULT hr = S_FALSE;
+	CString dsFilterLibPath;
+	dsFilterLibPath.Format( _T("%s\\AsyncSource.dll") , strAppPath );
+	m_hdll_source = CoLoadLibrary( T2OLE(dsFilterLibPath.GetBuffer() ) , FALSE );
+	if ( m_hdll_source == NULL )
+	{
+		return FALSE;
+	}
+	p_dllgetclassObject = (DLLGETCLASSOBJECT)GetProcAddress( m_hdll_source , "DllGetClassObject" );
+	IClassFactory* pFactouy = NULL;
+	//得到类工厂
+	p_dllgetclassObject( CLSID_AsynSource , IID_IClassFactory , (void**)&pFactouy );
+	IBaseFilter* pBaseFilter = NULL;
+	hr = pFactouy->CreateInstance( NULL , IID_IBaseFilter , (void**)&pBaseFilter );
+	pFactouy->Release();
+
+	if( FAILED( CoCreateInstance( CLSID_FilterGraph , NULL , CLSCTX_INPROC_SERVER, IID_IFilterGraph , (void**)&m_pFilterGraph ) ) )
+	{
+		return FALSE;
+	}
+	//async io
+	if( FAILED( m_pFilterGraph->AddFilter( pBaseFilter , filterNam[3] ) ) )
+	{
+		return FALSE;
+	}
+	pBaseFilter->Release();
+
+	//parser.dll
+	dsFilterLibPath.Format( _T("%s\\Parser.dll") , strAppPath );
+	m_hdll_parse = CoLoadLibrary( T2OLE(dsFilterLibPath.GetBuffer() ) , FALSE );
+	if ( m_hdll_parse == NULL )
+	{
+		return FALSE;
+	}
+	p_dllgetclassObject = (DLLGETCLASSOBJECT)GetProcAddress( m_hdll_parse , "DllGetClassObject" );
+	pFactouy = NULL;
+	//得到类工厂
+	p_dllgetclassObject( CLSID_Parser , IID_IClassFactory , (void**)&pFactouy );
+	pBaseFilter = NULL;
+	hr = pFactouy->CreateInstance( NULL , IID_IBaseFilter , (void**)&pBaseFilter );
+	pFactouy->Release();
+
+	//parser
+	if( FAILED( m_pFilterGraph->AddFilter( pBaseFilter , filterNam[4] ) ) )
+	{
+		return FALSE;
+	}
+	pBaseFilter->Release();
+
+
+	//显示输出
+	IBaseFilter *pVideoRenderFilter = NULL;
+	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
+	{
+		m_pFilterGraph->AddFilter( pVideoRenderFilter , filterNam[1] );
+		pVideoRenderFilter->Release();
+	}
+
+	//声音输出
+	IBaseFilter *pAudioRenderFilter = NULL;
+	if ( SUCCEEDED( CoCreateInstance( CLSID_DSoundRender , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pAudioRenderFilter  ) ) )
+	{
+		m_pFilterGraph->AddFilter( pAudioRenderFilter , filterNam[2] );
+		pAudioRenderFilter->Release();
+	}
+
+	IMediaFilter *pIMediaFilter = NULL;
+	if ( SUCCEEDED( m_pFilterGraph->QueryInterface( IID_IMediaFilter , (void **)&pIMediaFilter ) ) )
+	{
+		IReferenceClock *pRefClock = NULL;
+		if ( SUCCEEDED(pAudioRenderFilter->QueryInterface( IID_IReferenceClock , (void**)&pRefClock )) )
+		{
+			hr = pIMediaFilter->SetSyncSource(pRefClock);
+			hr = pVideoRenderFilter->SetSyncSource(pRefClock);
+			hr = pAudioRenderFilter->SetSyncSource(pRefClock);
+		}
+	}
+
+	m_pFilterGraph->FindFilterByName( filterNam[3] , &pBaseFilter );
+	IPin *pin = NULL;
+	hr = pBaseFilter->FindPin( L"Output" , &pin );
+	IFeFileSource *pFeFile;
+	pBaseFilter->QueryInterface( IID_IFeFileSource , (void**)&pFeFile );
+	pBaseFilter->Release();
+
+	m_pFilterGraph->FindFilterByName( filterNam[4] , &pBaseFilter );
+	IPin *recvpin = NULL;
+	pBaseFilter->FindPin(L"Input" , &recvpin);
+	hr = pin->Connect( recvpin , NULL );
+	pBaseFilter->Release();
+
+	//m_pFilterGraph->FindFilterByName(  )
+	pFeFile->Play( L"mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
+	pIMediaFilter->Run(0);
+
+	return TRUE;
+}
+
 BOOL CMainDlg::Clean()
 {
 	if( m_pFilterGraph )
@@ -249,6 +352,10 @@ BOOL CMainDlg::Clean()
 	if ( m_hdll_source )
 	{
 		CoFreeLibrary( m_hdll_source );
+	}
+	if ( m_hdll_parse )
+	{
+		CoFreeLibrary( m_hdll_parse );
 	}
 	return TRUE;
 }

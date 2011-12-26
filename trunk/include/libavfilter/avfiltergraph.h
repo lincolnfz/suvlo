@@ -130,7 +130,7 @@ void avfilter_inout_free(AVFilterInOut **inout);
  * @param outputs pointer to a linked list to the outputs of the graph, may be NULL.
  *                If non-NULL, *outputs is updated to contain the list of open outputs
  *                after the parsing, should be freed with avfilter_inout_free().
- * @return zero on success, a negative AVERROR code on error
+ * @return non negative on success, a negative AVERROR code on error
  */
 int avfilter_graph_parse(AVFilterGraph *graph, const char *filters,
                          AVFilterInOut **inputs, AVFilterInOut **outputs,
@@ -169,6 +169,7 @@ int avfilter_graph_send_command(AVFilterGraph *graph, const char *target, const 
  *       from the filter is provided, also AVFILTER_CMD_FLAG_ONE is not supported.
  */
 int avfilter_graph_queue_command(AVFilterGraph *graph, const char *target, const char *cmd, const char *arg, int flags, double ts);
+
 
 
 #endif /* AVFILTER_AVFILTERGRAPH_H */

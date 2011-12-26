@@ -134,7 +134,7 @@ protected:
 class CVideoOutPin : public CFePushPin
 {
 public:
-	CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr );
+	CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , CObjPool<AVPicture> *pool , VIDEOINFO *videoinfo , GUID *dstFmt );
 	virtual ~CVideoOutPin();
 
 	virtual HRESULT FillBuffer(IMediaSample *pSamp);
@@ -143,12 +143,22 @@ public:
 	virtual HRESULT DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest);
 	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
 	virtual HRESULT SetMediaType(const CMediaType *);
+	virtual HRESULT OnThreadCreate(void);
 	STDMETHODIMP EndOfStream(void);
 	STDMETHODIMP BeginFlush(void);
 	STDMETHODIMP EndFlush(void);
 
 	//impl CBasePin
 	virtual HRESULT CheckMediaType(const CMediaType *);
+
+protected:
+	CObjPool<AVPicture> *m_pAVPicturePool;
+	VIDEOINFO *m_pVideoinfo;
+	GUID *m_pvideoDstFmt;
+	CRefTime m_rtSampleTime;
+	REFERENCE_TIME m_iDefaultRepeatTime;
+	REFERENCE_TIME m_iRepeatTime;
+	CCritSec m_cSharedState;
 };
 
 //分析filter,主要进行解码工作
@@ -161,10 +171,12 @@ protected:
 	CVideoOutPin m_VideoOutPin;
 	CFeFFmpeg *m_pffmpeg;
 
-	BITMAPFILEHEADER m_bmpHead;
+	VIDEOINFO m_videoinfo;
+	GUID m_videoDstFmt;
 	WAVEFORMATEX m_waveFmt;
 	UNIT_BUF_POOL m_bufpool;
 	CObjPool<AVPicture> m_picpool;
+	CObjPool<AUDIO_PACK> m_audiopool;
 	//CObjPool<>
 public:
 	CParseFilter(LPUNKNOWN pUnk, HRESULT *phr);

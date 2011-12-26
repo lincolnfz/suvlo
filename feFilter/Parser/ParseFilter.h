@@ -126,7 +126,7 @@ public:
 	virtual HRESULT CheckMediaType(const CMediaType *)PURE;
 
 protected:
-	CCritSec *m_pLock;
+	//CCritSec *m_pLock;
 };
 
 

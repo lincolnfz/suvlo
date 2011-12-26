@@ -2,6 +2,7 @@
 #include "MainDlg.h"
 #include <bkwin/bkcolor.h>
 #include "feFilter/common/DefInterface.h"
+//#include "feFilter/common/filterUtil.h"
 
 WCHAR filterNam[][20]={
 	L"dsNetMedia",
@@ -24,6 +25,45 @@ unsigned int __stdcall run( void* parm )
 	char* url = (char*)parm;
 	//pMainDlg->m_wrapmms.play(url);
 	return 0;
+}
+
+HRESULT GetUnconnectedPin(
+	IBaseFilter *pFilter,   // Pointer to the filter.
+	PIN_DIRECTION PinDir,   // Direction of the pin to find.
+	IPin **ppPin)           // Receives a pointer to the pin.
+{
+	*ppPin = 0;
+	IEnumPins *pEnum = 0;
+	IPin *pPin = 0;
+	HRESULT hr = pFilter->EnumPins(&pEnum);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+	while (pEnum->Next(1, &pPin, NULL) == S_OK)
+	{
+		PIN_DIRECTION ThisPinDir;
+		pPin->QueryDirection(&ThisPinDir);
+		if (ThisPinDir == PinDir)
+		{
+			IPin *pTmp = 0;
+			hr = pPin->ConnectedTo(&pTmp);
+			if (SUCCEEDED(hr))  // Already connected, not the pin we want.
+			{
+				pTmp->Release();
+			}
+			else  // Unconnected, this is the pin we want.
+			{
+				pEnum->Release();
+				*ppPin = pPin;
+				return S_OK;
+			}
+		}
+		pPin->Release();
+	}
+	pEnum->Release();
+	// Did not find a matching pin.
+	return E_FAIL;
 }
 
 
@@ -296,10 +336,12 @@ BOOL CMainDlg::Init2()
 
 
 	//ÏÔÊ¾Êä³ö
+	IPin *pvideoRecPin;
 	IBaseFilter *pVideoRenderFilter = NULL;
 	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
 	{
 		m_pFilterGraph->AddFilter( pVideoRenderFilter , filterNam[1] );
+		GetUnconnectedPin( pVideoRenderFilter , PINDIR_INPUT , &pvideoRecPin );
 		pVideoRenderFilter->Release();
 	}
 
@@ -332,8 +374,11 @@ BOOL CMainDlg::Init2()
 
 	m_pFilterGraph->FindFilterByName( filterNam[4] , &pBaseFilter );
 	IPin *recvpin = NULL;
+	IPin *pVideoOut = NULL;
 	pBaseFilter->FindPin(L"Input" , &recvpin);
 	hr = pin->Connect( recvpin , NULL );
+	pBaseFilter->FindPin(L"video_out" , &pVideoOut);
+	hr = pVideoOut->Connect( pvideoRecPin , NULL );
 	pBaseFilter->Release();
 
 	//m_pFilterGraph->FindFilterByName(  )

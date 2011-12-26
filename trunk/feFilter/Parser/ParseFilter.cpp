@@ -3,6 +3,9 @@
 #include "../common/filterUtil.h"
 #include <wmsdkidl.h>
 
+#define  DEFAULT_WIDTH 208
+#define DEFAULT_HEIGHT 160
+
 //////////////////////////////////////////////////////////////////////////
 //datapull¼Ì³ÐÀà
 CDataPull::CDataPull(UNIT_BUF_POOL *pbufpool) : m_pbufpool(pbufpool)
@@ -340,7 +343,8 @@ CVideoOutPin::CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *ph
 	:CFePushPin( NAME("video out pull pin") , pFilter , pLock , phr , L"video_out" ) , m_pAVPicturePool(pool) , m_pVideoinfo(videoinfo) ,
 	m_pvideoDstFmt(dstFmt)
 {
-
+	m_pVideoinfo->bmiHeader.biHeight = DEFAULT_HEIGHT;
+	m_pVideoinfo->bmiHeader.biWidth = DEFAULT_WIDTH;
 }
 
 CVideoOutPin::~CVideoOutPin()

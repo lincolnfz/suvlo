@@ -1,7 +1,17 @@
 #include <windows.h>
 #include <streams.h>
+#include <process.h>
 #include "../common/DefInterface.h"
 #include "AsynSourceFilter.h"
+#include "../common/filterUtil.h"
+
+WCHAR filterNam[][20]={
+	L"dsNetMedia",
+	L"ViderRender",
+	L"AudioRender",
+	L"AsyncIO",
+	L"Parser"
+};
 
 CAsynSourceOutPin::CAsynSourceOutPin(HRESULT * phr, CAsynReader *pReader ,CAsyncIo *pIo, CCritSec * pLock)
 	:CBasePin(NAME("Async output pin"), pReader , pLock , phr , L"Output" , PINDIR_OUTPUT),
@@ -368,7 +378,7 @@ CBasePin * CAsynReader::GetPin(int n)
 //asyncfilter
 
 CAsynSourceFilter::CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr) : CAsynReader(NAME("feIO Reader") , pUnk , &m_feBufPool , phr),
-	m_wrapmms( m_feBufPool.getPool() )
+	m_wrapmms( m_feBufPool.getPool() , this )
 {
 
 }
@@ -397,6 +407,59 @@ CUnknown * WINAPI CAsynSourceFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr
 	return pNew;
 }
 
+unsigned int CAsynSourceFilter::CheckThread( void *arg )
+{
+	CAsynSourceFilter *pFilter = (CAsynSourceFilter*)arg;
+	pFilter->notifyDownRecv();
+	return 0;
+}
+
+int CAsynSourceFilter::notifyDownRecv()
+{
+	IMediaEventEx *pMediaEvent;
+	IFilterGraph *pfilterGraph = GetFilterGraph();
+	pfilterGraph->QueryInterface(IID_IMediaEventEx , (void**)&pMediaEvent);
+	HANDLE hevent;
+	HRESULT hr;
+	BOOL bDone = FALSE;
+	long ecode , param1 , param2;
+	pMediaEvent->GetEventHandle( (OAEVENT*)&hevent );
+	while( !bDone ){
+		if ( WAIT_OBJECT_0 == WaitForSingleObject( hevent , 100 ) )
+		{
+			while ( hr = pMediaEvent->GetEvent( &ecode , &param1 , &param2 , 0 ) , SUCCEEDED(hr) )
+			{
+				hr = pMediaEvent->FreeEventParams( ecode , param1 , param2 );
+				if ( SUCCEEDED(hr) && WM_APP+100 == ecode )
+				{
+					IBaseFilter *parser;
+					pfilterGraph->FindFilterByName( filterNam[4] , &parser );
+					IPin *pin;
+					parser->FindPin( L"Input" , &pin );
+					hr = m_OutputPin.Connect( pin , NULL );
+					pin->Release();
+					
+					IBaseFilter *renderfilter;
+					pfilterGraph->FindFilterByName( filterNam[1] , &renderfilter );
+					IPin *precv;
+					parser->FindPin( L"video_out" , &pin );
+					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
+					hr = pin->Connect( precv , NULL );
+
+					IMediaFilter *pmedia;
+					pfilterGraph->QueryInterface( IID_IMediaFilter , (void**)&pmedia );
+					pmedia->Run(0);
+					pmedia->Release();
+					bDone = TRUE;
+					break;
+				}
+			}
+		}
+	}
+	pMediaEvent->Release();
+	return 0;
+}
+
 STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 {
 	DWORD size = WideCharToMultiByte( CP_OEMCP,NULL,url,-1,NULL,0,NULL,FALSE );
@@ -405,6 +468,10 @@ STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 	//²¥·ÅÔ¶³ÌÊÓÆµ
 	m_wrapmms.openfile( lpurl );
 	delete []lpurl;
+
+	//IMediaEventEx *pevent;
+	//this->GetFilterGraph()->QueryInterface(IID_IMediaEventEx , (void**)&pevent);
+	_beginthreadex( NULL , 0 , CheckThread , this , 0 , 0 );
 
 	return S_OK;
 }

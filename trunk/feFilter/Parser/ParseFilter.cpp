@@ -2,6 +2,15 @@
 #include "ParseFilter.h"
 #include "../common/filterUtil.h"
 #include <wmsdkidl.h>
+#include <process.h>
+
+WCHAR filterNam[][20]={
+	L"dsNetMedia",
+	L"ViderRender",
+	L"AudioRender",
+	L"AsyncIO",
+	L"Parser"
+};
 
 #define  DEFAULT_WIDTH 208
 #define DEFAULT_HEIGHT 160
@@ -48,8 +57,8 @@ HRESULT CDataPull::EndFlush()
 
 //////////////////////////////////////////////////////////////////////////
 //dataInputPin
-CDataInputPin::CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool )
-	:CBasePin( NAME("parser input pin") , pFilter , pLock , phr , L"Input" , PINDIR_INPUT ) , m_pullPin( pbufpool )
+CDataInputPin::CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool , CFeFFmpeg* pffmpeg )
+	:CBasePin( NAME("parser input pin") , pFilter , pLock , phr , L"Input" , PINDIR_INPUT ) , m_pullPin( pbufpool ) , m_pFeFFmpeg(pffmpeg)
 {
 	
 }
@@ -78,6 +87,7 @@ HRESULT CDataInputPin::BreakConnect()
 
 HRESULT CDataInputPin::Active(void)
 {
+	m_pFeFFmpeg->Start();
 	return m_pullPin.Active();
 }
 
@@ -343,8 +353,8 @@ CVideoOutPin::CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *ph
 	:CFePushPin( NAME("video out pull pin") , pFilter , pLock , phr , L"video_out" ) , m_pAVPicturePool(pool) , m_pVideoinfo(videoinfo) ,
 	m_pvideoDstFmt(dstFmt)
 {
-	m_pVideoinfo->bmiHeader.biHeight = DEFAULT_HEIGHT;
-	m_pVideoinfo->bmiHeader.biWidth = DEFAULT_WIDTH;
+	//m_pVideoinfo->bmiHeader.biHeight = DEFAULT_HEIGHT;
+	//m_pVideoinfo->bmiHeader.biWidth = DEFAULT_WIDTH;
 }
 
 CVideoOutPin::~CVideoOutPin()
@@ -575,17 +585,29 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 	return S_OK;
 }
 
+STDMETHODIMP CVideoOutPin::Notify(IBaseFilter * pSender, Quality q)
+{
+	if ( q.Late > 0 )
+	{
+		m_rtSampleTime += q.Late;
+	}
+	return S_OK;
+}
 
 //////////////////////////////////////////////////////////////////////////
 //parserFilter
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
-	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool ) ,
+	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
+	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
 	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
 	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ) //video out pin
 {
 	InitPool( &m_bufpool , 10 , 131072 );
-	m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt);
+	//m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt);
+	m_videoinfo.bmiHeader.biWidth = DEFAULT_WIDTH;
+	m_videoinfo.bmiHeader.biHeight = DEFAULT_HEIGHT;
+	m_videoinfo.AvgTimePerFrame = 500000;
 }
 
 
@@ -607,6 +629,49 @@ CUnknown * WINAPI CParseFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr)
 		*phr = S_OK;
 	}
 	return pNew;
+}
+
+STDMETHODIMP CParseFilter::Run(REFERENCE_TIME tStart)
+{
+	HRESULT hr = CBaseFilter::Run( tStart );
+	_beginthreadex( NULL , 0 , CheckOutThread , this , 0 , 0 );
+	return hr;
+}
+
+unsigned int CParseFilter::CheckOutThread( void *arg )
+{
+	CParseFilter *pFilter = (CParseFilter*)arg;
+	pFilter->ProcOutConnect();
+	return 0;
+}
+
+int CParseFilter::ProcOutConnect()
+{
+	IMediaEventEx *pMediaEvent;
+	IFilterGraph *pfilterGraph = GetFilterGraph();
+	pfilterGraph->QueryInterface(IID_IMediaEventEx , (void**)&pMediaEvent);
+	HANDLE hevent;
+	HRESULT hr;
+	BOOL bDone = FALSE;
+	long ecode , param1 , param2;
+	pMediaEvent->GetEventHandle( (OAEVENT*)&hevent );
+	while( !bDone ){
+		if ( WAIT_OBJECT_0 == WaitForSingleObject( hevent , INFINITE ) )
+		{
+			while ( hr = pMediaEvent->GetEvent( &ecode , &param1 , &param2 , 0 ) , SUCCEEDED(hr) )
+			{
+				hr = pMediaEvent->FreeEventParams( ecode , param1 , param2 );
+				if ( SUCCEEDED(hr) && WM_APP+101 == ecode )
+				{
+					IMediaFilter *pmedia;
+					pfilterGraph->QueryInterface( IID_IMediaFilter , (void**)&pmedia );
+					pmedia->Stop();
+				}
+			}
+		}
+	}
+	pMediaEvent->Release();
+	return 0;
 }
 
 int CParseFilter::GetPinCount()

@@ -87,6 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\bufpool.cpp" />
+    <ClCompile Include="..\common\filterUtil.cpp" />
     <ClCompile Include="..\common\ObjPool.cpp" />
     <ClCompile Include="asyncio.cpp" />
     <ClCompile Include="AsynSourceFilter.cpp" />
@@ -97,6 +98,7 @@
   <ItemGroup>
     <ClInclude Include="..\common\bufpool.h" />
     <ClInclude Include="..\common\feUtil.h" />
+    <ClInclude Include="..\common\filterUtil.h" />
     <ClInclude Include="..\common\ObjPool.h" />
     <ClInclude Include="asyncio.h" />
     <ClInclude Include="AsynSourceFilter.h" />

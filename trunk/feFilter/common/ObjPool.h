@@ -181,6 +181,7 @@ getnew:
 
 	DataNode<CObjQueue<T>*> *GetWriteQueue( DataNode<CObjQueue<T>*>* pStale )
 	{
+		LONGLONG ll = 0;
 		DataNode<CObjQueue<T>*>* pNode = pStale;
 		if ( !pNode )
 		{
@@ -191,7 +192,7 @@ getnew:
 			return pNode;
 		}
 		pNode->pData->Resetcursor();
-		LONGLONG ll = pNode->pData->GetPosition();
+		ll = pNode->pData->GetPosition();
 		putDataLink( m_pFullList , pNode ); //数据写满,归还给完成队列
 getnew:
 		pNode = getDataLink( m_pEmptyList );

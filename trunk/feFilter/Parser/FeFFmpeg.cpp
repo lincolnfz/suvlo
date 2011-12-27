@@ -163,7 +163,7 @@ AVDictionary **setup_find_stream_info_opts(AVFormatContext *s, AVDictionary *cod
 
 	if (!s->nb_streams)
 		return NULL;
-	*opts = (AVDictionary *)av_mallocz(s->nb_streams * sizeof(*opts));
+	opts = (AVDictionary**)av_mallocz(s->nb_streams * sizeof(*opts));
 	if (!opts) {
 		av_log(NULL, AV_LOG_ERROR, "Could not alloc memory for stream options.\n");
 		return NULL;
@@ -199,11 +199,11 @@ PixelFormat TransFmt( GUID *SubType ){
 }
 
 
-CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool , CObjPool<AVPicture>* picpool , CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo , WAVEFORMATEX* wave , GUID* dstFmt)
+CFeFFmpeg* CFeFFmpeg::GetInstance( UNIT_BUF_POOL *pool , CObjPool<AVPicture>* picpool , CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo , WAVEFORMATEX* wave , GUID* dstFmt , CBaseFilter* pFilter)
 {
 	if ( CFeFFmpeg::m_pFeFFmpeg == NULL )
 	{		
-		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool,picpool,audiopool,videoinfo,wave,dstFmt);
+		CFeFFmpeg::m_pFeFFmpeg = new CFeFFmpeg(pool,picpool,audiopool,videoinfo,wave,dstFmt,pFilter);
 		g_pFeFFmpeg = CFeFFmpeg::m_pFeFFmpeg;
 	}
 	return CFeFFmpeg::m_pFeFFmpeg;
@@ -223,8 +223,8 @@ int CFeFFmpeg::Destory()
 	return ret;
 }
 
-CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ,CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo, WAVEFORMATEX* wave , GUID* dstFmt) : m_videopool(UNITQUEUE,UNITSIZE) ,
-	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool) , m_picpool(picpool) , m_sampleAudiopool(audiopool) , m_pVideoInfo(videoinfo) , m_waveFmt(wave) , m_pDstFmt(dstFmt)
+CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ,CObjPool<AUDIO_PACK>* audiopool, VIDEOINFO* videoinfo, WAVEFORMATEX* wave , GUID* dstFmt , CBaseFilter *pFilter) : m_videopool(UNITQUEUE,UNITSIZE) ,
+	m_audiopool(UNITQUEUE,UNITSIZE) , m_pbufpool(pool) , m_picpool(picpool) , m_sampleAudiopool(audiopool) , m_pVideoInfo(videoinfo) , m_waveFmt(wave) , m_pDstFmt(dstFmt) , m_pFilter(pFilter)
 {
 	av_register_all();
 	avcodec_init();
@@ -237,6 +237,8 @@ CFeFFmpeg::CFeFFmpeg( UNIT_BUF_POOL *pool ,  CObjPool<AVPicture>* picpool ,CObjP
 	av_register_protocol2( &fe_memProtocol , sizeof(fe_memProtocol) );
 
 	av_init_packet(&m_flush_pkt);
+	//m_flush_pkt.data = (uint8_t *)av_mallocz(5);
+	//memcpy( m_flush_pkt.data , "FLUSH" , 5 );
 	m_flush_pkt.data = (uint8_t*)"FLUSH";
 }
 
@@ -267,7 +269,7 @@ int CFeFFmpeg::Start()
 	char file[] = "femem://play.mem";
 	av_strlcpy( m_filenam , file , strlen(file) );
 	int i = 0;
-	int t = sizeof(m_wanted_stream);
+	int t = sizeof(m_wanted_stream)/sizeof(m_wanted_stream[0]);
 	for ( i=0 ; i < t ; ++i )
 	{
 		m_wanted_stream[i] = -1;
@@ -275,7 +277,7 @@ int CFeFFmpeg::Start()
 	m_video_disable = 0;
 	m_audio_disable = 0;
 	m_show_status = 0;
-	_beginthreadex( NULL , 0 , ReadThread ,  this , 0 , 0);
+	_beginthreadex( NULL , 0 , ReadThread ,  (void*)(CFeFFmpeg::m_pFeFFmpeg) , 0 , 0);
 	
 	return 0;
 }
@@ -427,6 +429,7 @@ unsigned int CFeFFmpeg::ReadThread( void *avg )
 int CFeFFmpeg::DoProcessingLoop()
 {
 	AVFormatContext *ic = NULL;
+	m_codec_opts = NULL;
 	m_img_convert_ctx = NULL;
 	int err, i, ret;
 	int st_index[AVMEDIA_TYPE_NB];
@@ -441,6 +444,7 @@ int CFeFFmpeg::DoProcessingLoop()
 	m_video_stream = -1;
 	m_audio_stream = -1;
 	m_subtitle_stream = -1;
+	ic = avformat_alloc_context();
 	err = avformat_open_input(&ic, m_filenam , NULL , NULL);
 	if (err < 0) {
 		ret = -1;
@@ -450,7 +454,7 @@ int CFeFFmpeg::DoProcessingLoop()
 	if(genpts)
 		ic->flags |= AVFMT_FLAG_GENPTS;
 
-	av_dict_set( &m_codec_opts, "request_channels", "2", 0);
+	//av_dict_set( &m_codec_opts, "request_channels", "2", 0);
 	opts = setup_find_stream_info_opts(ic, m_codec_opts);
 	orig_nb_streams = ic->nb_streams;
 
@@ -515,6 +519,7 @@ int CFeFFmpeg::DoProcessingLoop()
 		ret = -1;
 		goto fail;
 	}
+	//m_pFilter->NotifyEvent( WM_APP+101 , m_video_stream , m_audio_stream );
 
 	for (;;)
 	{
@@ -647,9 +652,9 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 	av_free_packet( pkt );
 	m_videopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
 
-	if ( got_picture )
+	if ( !got_picture )
 	{
-		int ret = 1;
+		int ret = 0;
 		return ret;
 	}
 	AVPicture apic;
@@ -659,7 +664,7 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 		PutDataPool( m_picpool , &apic );
 	}
 
-	return 0;
+	return 1;
 }
 
 int CFeFFmpeg::ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict, 

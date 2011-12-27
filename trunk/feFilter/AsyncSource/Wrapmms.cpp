@@ -71,7 +71,7 @@ int mms_io_tcp_connect(void *data, const char *host, int port)
 }
 
 
-CWrapmms::CWrapmms(UNIT_BUF_POOL *pool )
+CWrapmms::CWrapmms(UNIT_BUF_POOL *pool ,CBaseFilter* pbaseFilter):m_pFilter(pbaseFilter)
 {
 	m_io_t = (mms_io_t*)malloc( sizeof( mms_io_t ) );
 	m_io_t->connect = mms_io_tcp_connect;
@@ -115,7 +115,8 @@ unsigned CALLBACK CWrapmms::recvdata( void *arge )
 		pMMS->m_timelen = mms_get_raw_time_length( pMMS->m_mms_t );
 		pMMS->m_filelen = mms_get_length( pMMS->m_mms_t );
 		pMMS->m_pBufpool->sec = pMMS->m_totalsec;
-		pMMS->m_pBufpool->llRaw = pMMS->m_filelen;
+		pMMS->m_pBufpool->llRaw = pMMS->m_filelen;		
+		pMMS->m_pFilter->NotifyEvent( WM_APP + 100 , NULL , NULL );
 		char* buf = (char*)malloc(RECV_BUF_SIZE);
 		while(  true )
 		{		

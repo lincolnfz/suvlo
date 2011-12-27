@@ -41,6 +41,9 @@
     <ClCompile Include="..\common\bufpool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\filterUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AsynSourceFilter.h">
@@ -62,6 +65,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\common\bufpool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\filterUtil.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

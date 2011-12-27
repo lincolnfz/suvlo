@@ -36,7 +36,7 @@ protected:
 class CDataInputPin : public CBasePin
 {
 public:
-	CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool );
+	CDataInputPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , UNIT_BUF_POOL *pbufpool , CFeFFmpeg* );
 	virtual ~CDataInputPin();
 
 	//拉模式中调用pullpin的content
@@ -60,10 +60,12 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE EndFlush( void);
 
 protected:
-	CDataPull m_pullPin;
+	CFeFFmpeg *m_pFeFFmpeg;
+	CDataPull m_pullPin;	
 
 };
 
+//推模式接口
 class CFePushPin : public CAMThread , public CBaseOutputPin
 {
 public:
@@ -98,6 +100,7 @@ public:
 	HRESULT Run(void) { return CAMThread::CallWorker(CMD_RUN); }
 	HRESULT Pause(void) { return CAMThread::CallWorker(CMD_PAUSE); }
 	HRESULT Stop(void) { return CAMThread::CallWorker(CMD_STOP); }
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q){ return S_OK; }
 
 protected:
 	Command GetRequest(void) { return (Command) CAMThread::GetRequest(); }
@@ -148,6 +151,8 @@ public:
 	STDMETHODIMP BeginFlush(void);
 	STDMETHODIMP EndFlush(void);
 
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
+
 	//impl CBasePin
 	virtual HRESULT CheckMediaType(const CMediaType *);
 
@@ -167,9 +172,9 @@ class CParseFilter : public CBaseFilter
 protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
-	CDataInputPin m_DataInputPin;
-	CVideoOutPin m_VideoOutPin;
 	CFeFFmpeg *m_pffmpeg;
+	CDataInputPin m_DataInputPin;
+	CVideoOutPin m_VideoOutPin;	
 
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;
@@ -183,7 +188,10 @@ public:
 	virtual ~CParseFilter(void);
 
 	static CUnknown * WINAPI CreateInstance(LPUNKNOWN, HRESULT *);
+	static unsigned int __stdcall CheckOutThread( void *arg );
+	int ProcOutConnect();
 
+	STDMETHODIMP Run(REFERENCE_TIME tStart);
 	// you need to supply these to access the pins from the enumerator
 	// and for default Stop and Pause/Run activation.
 	virtual int GetPinCount();

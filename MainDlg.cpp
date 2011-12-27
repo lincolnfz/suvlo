@@ -309,7 +309,7 @@ BOOL CMainDlg::Init2()
 	if( FAILED( m_pFilterGraph->AddFilter( pBaseFilter , filterNam[3] ) ) )
 	{
 		return FALSE;
-	}
+	}	
 	pBaseFilter->Release();
 
 	//parser.dll
@@ -336,12 +336,10 @@ BOOL CMainDlg::Init2()
 
 
 	//ÏÔÊ¾Êä³ö
-	IPin *pvideoRecPin;
 	IBaseFilter *pVideoRenderFilter = NULL;
 	if( SUCCEEDED( CoCreateInstance( CLSID_VideoRenderer , NULL , CLSCTX_INPROC_SERVER , IID_IBaseFilter , (void**)&pVideoRenderFilter ) ) )
 	{
 		m_pFilterGraph->AddFilter( pVideoRenderFilter , filterNam[1] );
-		GetUnconnectedPin( pVideoRenderFilter , PINDIR_INPUT , &pvideoRecPin );
 		pVideoRenderFilter->Release();
 	}
 
@@ -366,24 +364,13 @@ BOOL CMainDlg::Init2()
 	}
 
 	m_pFilterGraph->FindFilterByName( filterNam[3] , &pBaseFilter );
-	IPin *pin = NULL;
-	hr = pBaseFilter->FindPin( L"Output" , &pin );
 	IFeFileSource *pFeFile;
 	pBaseFilter->QueryInterface( IID_IFeFileSource , (void**)&pFeFile );
 	pBaseFilter->Release();
 
-	m_pFilterGraph->FindFilterByName( filterNam[4] , &pBaseFilter );
-	IPin *recvpin = NULL;
-	IPin *pVideoOut = NULL;
-	pBaseFilter->FindPin(L"Input" , &recvpin);
-	hr = pin->Connect( recvpin , NULL );
-	pBaseFilter->FindPin(L"video_out" , &pVideoOut);
-	hr = pVideoOut->Connect( pvideoRecPin , NULL );
-	pBaseFilter->Release();
-
 	//m_pFilterGraph->FindFilterByName(  )
 	pFeFile->Play( L"mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
-	pIMediaFilter->Run(0);
+	//pIMediaFilter->Run(0);
 
 	return TRUE;
 }

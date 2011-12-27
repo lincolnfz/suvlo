@@ -12,7 +12,7 @@ struct UNIT_BUF_POOL;
 class CWrapmms
 {
 public:
-	CWrapmms(UNIT_BUF_POOL*);
+	CWrapmms(UNIT_BUF_POOL* , CBaseFilter*);
 	virtual ~CWrapmms(void);
 
 	void openfile( const char* lpUrl );
@@ -24,6 +24,7 @@ protected:
 	mms_io_t* m_io_t;
 	mms_t* m_mms_t;
 	char* m_playbuf;
+	CBaseFilter *m_pFilter;
 	char m_url[256];
 	UNIT_BUF_POOL *m_pBufpool;
 	double m_totalsec;

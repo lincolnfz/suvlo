@@ -46,7 +46,7 @@ struct AUDIO_PACK
 class CFeFFmpeg
 {
 public:
-	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt);
+	static CFeFFmpeg* GetInstance( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt , CBaseFilter* pFilter);
 	static int Destory();
 
 	virtual ~CFeFFmpeg();
@@ -56,7 +56,7 @@ public:
 	
 
 protected:
-	CFeFFmpeg( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt );
+	CFeFFmpeg( UNIT_BUF_POOL* , CObjPool<AVPicture>* , CObjPool<AUDIO_PACK>* , VIDEOINFO* , WAVEFORMATEX* , GUID* dstFmt , CBaseFilter* pFilter );
 
 	int ImgCover( SwsContext **ctx , AVFrame *pFrame , AVPicture* pict, 
 		int widthSrc , int heightSrc , PixelFormat pixFmtSrc , 
@@ -92,6 +92,7 @@ protected:
 	VIDEOINFO *m_pVideoInfo;
 	WAVEFORMATEX *m_waveFmt;
 	GUID *m_pDstFmt;
+	CBaseFilter *m_pFilter;
 
 	//////////////////////////////////////////////////////////////////////////
 	//以下与ffmpeg相关

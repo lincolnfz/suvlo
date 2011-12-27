@@ -194,6 +194,9 @@ public:
 		}
 	}
 
+	static unsigned int __stdcall CheckThread( void *arg );
+	int notifyDownRecv();
+
 	//--- IFeFileSource methods ---
 	STDMETHODIMP Play( LPCWSTR url );
 	STDMETHODIMP Seek( ULONG64 utime );

@@ -62,6 +62,8 @@ int putDataLink( DataLink<T> *pDataLink , DataNode<T> *pDatanode )
 		return 0;
 	}
 	pDatanode->pNext = NULL;
+
+	//put link
 	CFeLockMutex( pDataLink->hMutex );
 	if ( pDataLink->pHead == NULL )
 	{

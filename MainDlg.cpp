@@ -173,8 +173,17 @@ void CMainDlg::play( const char* url )
 
 LRESULT CMainDlg::OnPlay_Pause()
 {
-	play( "mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
+	//play( "mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
 	//play( "mms://mmc.daumcast.net/mmc/1/500/0902418000208h.wmv" );
+	IBaseFilter *pBaseFilter;
+	m_pFilterGraph->FindFilterByName( filterNam[3] , &pBaseFilter );
+	IFeFileSource *pFeFile;
+	pBaseFilter->QueryInterface( IID_IFeFileSource , (void**)&pFeFile );
+	pBaseFilter->Release();
+
+	//m_pFilterGraph->FindFilterByName(  )
+	pFeFile->Play( L"mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
+
 	return 0L;
 }
 
@@ -363,14 +372,14 @@ BOOL CMainDlg::Init2()
 		}
 	}
 
+	/*
 	m_pFilterGraph->FindFilterByName( filterNam[3] , &pBaseFilter );
 	IFeFileSource *pFeFile;
 	pBaseFilter->QueryInterface( IID_IFeFileSource , (void**)&pFeFile );
 	pBaseFilter->Release();
 
-	//m_pFilterGraph->FindFilterByName(  )
 	pFeFile->Play( L"mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
-	//pIMediaFilter->Run(0);
+	*/
 
 	return TRUE;
 }

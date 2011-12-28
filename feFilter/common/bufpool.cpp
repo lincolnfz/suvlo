@@ -24,7 +24,8 @@ void InitPool( UNIT_BUF_POOL* pool, int units , long unit_size )
 		DataNode<UNIT_BUF*> *pnode = new DataNode<UNIT_BUF*>;
 		pnode->pData = &pool->pList[idx];
 		putDataLink( pool->pEmptyLink , pnode );
-	}	
+	}
+	pool->hGetQueueMutex = CreateMutex( NULL , FALSE , NULL );
 
 }
 
@@ -42,6 +43,7 @@ void DestoryPool( UNIT_BUF_POOL* pool)
 	pool->units = 0;
 	destoryDataLink(&pool->pEmptyLink);
 	destoryDataLink(&pool->pFullLink);
+	CloseHandle( pool->hGetQueueMutex );
 }
 
 void ResetPool( UNIT_BUF_POOL* pool){
@@ -63,25 +65,28 @@ void ResetPool( UNIT_BUF_POOL* pool){
 功能:向池提交已经读取完毕的单元,并得到一个新的数据单元
 */
 DataNode<UNIT_BUF*> *GetReadUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pStale )
-{
+{	
 	DataNode<UNIT_BUF*> *pUnit = pStale;
 	if ( !pUnit )
 	{
-		goto getnew;
+		goto newinstance;
 	}
 	if ( pUnit->pData->eof ) //这是最后一个有效数据单元
 	{
-		return pUnit;
+		goto get;
 	}
-	if ( pUnit && pUnit->pData->opsize < pUnit->pData->size )
+	if ( pUnit->pData->opsize < pUnit->pData->size )
 	{
-		return pUnit;
+		goto get;
 	}
-	pUnit->pData->opsize = 0;
+	//pUnit->pData->opsize = 0;
 	putDataLink( pool->pEmptyLink , pUnit );
 
-getnew:
+newinstance:
 	pUnit = getDataLink( pool->pFullLink );
+	pUnit->pData->opsize = 0;
+
+get:
 	return pUnit;
 }
 
@@ -93,25 +98,29 @@ DataNode<UNIT_BUF*> *GetWriteUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSt
 	DataNode<UNIT_BUF*> *pUnit = pStale;
 	if ( !pUnit )
 	{
-		goto getnew;
+		goto newinstance;
 	}
-	if ( pUnit && pUnit->pData->opsize < pUnit->pData->size )
+	if ( pUnit->pData->opsize < pUnit->pData->size )
 	{
-		return pUnit;
+		goto get;
 	}
-	pUnit->pData->opsize = 0;
+	//pUnit->pData->opsize = 0;
 	LONGLONG llpos = pUnit->pData->position;
 	putDataLink( pool->pFullLink , pUnit );
 
-getnew:
-	pUnit = getDataLink( pool->pEmptyLink ); 
+newinstance:
+	pUnit = getDataLink( pool->pEmptyLink );
+	pUnit->pData->opsize = 0;
 	pUnit->pData->position += pool->unit_size;
+
+get:
 	return pUnit;
 }
 
 //如果 len <=0 说明已经没有数据
 long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
-{		
+{	
+	CFeLockMutex( pool->hGetQueueMutex );
 	long total = 0;
 	UNIT_BUF *pBufUnit = NULL;
 	while( len > 0 ){
@@ -131,7 +140,9 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 		pool->pWrite = GetWriteUnit( pool , pool->pWrite );
 		pool->pWrite->pData->eof = 1;
 		pool->pWrite->pData->size = pool->pWrite->pData->opsize;
+		pool->pWrite->pData->opsize = 0;
 		putDataLink( pool->pFullLink , pool->pWrite );
+		pool->pWrite = NULL;
 	}
 
 	return total;
@@ -139,6 +150,7 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 
 long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 {
+	CFeLockMutex( pool->hGetQueueMutex );
 	long total = 0;
 	UNIT_BUF *pBufUnit = NULL;
 	while( len > 0 ){
@@ -156,10 +168,11 @@ long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 			total += lop;
 			pool->llPosition = pool->pRead->pData->position + pool->pRead->pData->opsize; //设置当前内存池总的偏移量
 		}else{
-			pool->pRead->pData->eof = 0;
-			pool->pRead->pData->opsize = 0;
+			pool->pRead->pData->eof = 0;			
 			pool->pRead->pData->size = pool->unit_size;
+			pool->pRead->pData->opsize = 0;
 			putDataLink( pool->pEmptyLink , pool->pRead );
+			pool->pRead = NULL;
 			break;
 		}
 

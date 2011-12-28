@@ -140,8 +140,9 @@ public:
 	CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , CObjPool<AVPicture> *pool , VIDEOINFO *videoinfo , GUID *dstFmt );
 	virtual ~CVideoOutPin();
 
+	//到end的地方,必须是重写的
+	//start
 	virtual HRESULT FillBuffer(IMediaSample *pSamp);
-
 	//impl CBaseOutputPin
 	virtual HRESULT DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest);
 	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
@@ -150,11 +151,11 @@ public:
 	STDMETHODIMP EndOfStream(void);
 	STDMETHODIMP BeginFlush(void);
 	STDMETHODIMP EndFlush(void);
-
 	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
 	//impl CBasePin
 	virtual HRESULT CheckMediaType(const CMediaType *);
+	//end
 
 protected:
 	CObjPool<AVPicture> *m_pAVPicturePool;
@@ -166,6 +167,33 @@ protected:
 	CCritSec m_cSharedState;
 };
 
+class CAudioOutPin : public CFePushPin
+{
+public:
+	CAudioOutPin(CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , CObjPool<AUDIO_PACK> *audiopool , WAVEFORMATEX *pwafefmt);
+	~CAudioOutPin();
+
+	virtual HRESULT FillBuffer(IMediaSample *pSamp);
+	//impl CBaseOutputPin
+	virtual HRESULT DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest);
+	virtual HRESULT GetMediaType(int iPosition, __inout CMediaType *pMediaType);
+	virtual HRESULT SetMediaType(const CMediaType *);
+	virtual HRESULT OnThreadCreate(void);
+	STDMETHODIMP EndOfStream(void);
+	STDMETHODIMP BeginFlush(void);
+	STDMETHODIMP EndFlush(void);
+	STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
+
+	//impl CBasePin
+	virtual HRESULT CheckMediaType(const CMediaType *);
+
+protected:
+	CObjPool<AUDIO_PACK> *m_pAudioPool;
+	WAVEFORMATEX *m_pwavFmt;
+	CCritSec m_cSharedState;
+	CRefTime m_rtSampleTime;
+};
+
 //分析filter,主要进行解码工作
 class CParseFilter : public CBaseFilter
 {
@@ -173,12 +201,14 @@ protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
 	CFeFFmpeg *m_pffmpeg;
-	CDataInputPin m_DataInputPin;
-	CVideoOutPin m_VideoOutPin;	
-
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;
 	WAVEFORMATEX m_waveFmt;
+
+	CDataInputPin m_DataInputPin;
+	CVideoOutPin m_VideoOutPin;	
+	CAudioOutPin m_AudOutPin;
+	
 	UNIT_BUF_POOL m_bufpool;
 	CObjPool<AVPicture> m_picpool;
 	CObjPool<AUDIO_PACK> m_audiopool;

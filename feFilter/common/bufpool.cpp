@@ -120,7 +120,7 @@ get:
 //如果 len <=0 说明已经没有数据
 long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 {	
-	CFeLockMutex( pool->hGetQueueMutex );
+	//CFeLockMutex( pool->hGetQueueMutex );
 	long total = 0;
 	UNIT_BUF *pBufUnit = NULL;
 	while( len > 0 ){
@@ -150,7 +150,7 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 
 long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 {
-	CFeLockMutex( pool->hGetQueueMutex );
+	//CFeLockMutex( pool->hGetQueueMutex );
 	long total = 0;
 	UNIT_BUF *pBufUnit = NULL;
 	while( len > 0 ){

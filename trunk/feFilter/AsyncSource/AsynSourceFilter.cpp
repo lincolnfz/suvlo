@@ -439,12 +439,22 @@ int CAsynSourceFilter::notifyDownRecv()
 					hr = m_OutputPin.Connect( pin , NULL );
 					pin->Release();
 					
+					IPin *precv;
+					//connect video					
 					IBaseFilter *renderfilter;
 					pfilterGraph->FindFilterByName( filterNam[1] , &renderfilter );
-					IPin *precv;
+					
 					parser->FindPin( L"video_out" , &pin );
 					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
-					hr = pin->Connect( precv , NULL );
+					hr = pin->Connect( precv , NULL );					
+					renderfilter->Release();
+
+					//connect audio
+					pfilterGraph->FindFilterByName( filterNam[2] , &renderfilter );
+					parser->FindPin( L"audio_out" , &pin );
+					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
+					hr = pin->Connect( precv , NULL );	
+					renderfilter->Release();
 
 					IMediaFilter *pmedia;
 					pfilterGraph->QueryInterface( IID_IMediaFilter , (void**)&pmedia );
@@ -469,9 +479,22 @@ STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 	m_wrapmms.openfile( lpurl );
 	delete []lpurl;
 
-	//IMediaEventEx *pevent;
-	//this->GetFilterGraph()->QueryInterface(IID_IMediaEventEx , (void**)&pevent);
-	_beginthreadex( NULL , 0 , CheckThread , this , 0 , 0 );
+	//_beginthreadex( NULL , 0 , CheckThread , this , 0 , 0 );
+
+	BYTE buf[20480];
+	DWORD len,dwrite;
+	HANDLE hOpenFile = CreateFile( NAME("c:\\aa.wmv") , GENERIC_WRITE , 0 , 0 , CREATE_ALWAYS , OPEN_ALWAYS , 0 );
+
+	while(1){
+		m_feBufPool.Read( buf , 20480 , FALSE , &len );
+		if ( len == 0 )
+		{
+			break;
+		}
+		SetFilePointer( hOpenFile , 0 , 0 , FILE_END);
+		WriteFile( hOpenFile , buf , len , &dwrite , NULL );
+	}
+	CloseHandle( hOpenFile );
 
 	return S_OK;
 }

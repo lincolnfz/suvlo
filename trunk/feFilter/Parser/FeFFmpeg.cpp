@@ -615,13 +615,19 @@ unsigned int __stdcall CFeFFmpeg::DecodeAudioThread( void *avg )
 
 int CFeFFmpeg::DoVideoDecodeLoop()
 {
-	AVFrame *frame= avcodec_alloc_frame();	
+	AVFrame *frame= avcodec_alloc_frame();
+	AVPicture apic;
 	int ret = 0;
 	for (;;)
 	{
 		ret = GetVideoFrame( frame );
 		if( ret < 0 ) goto end;
-		
+				
+		if( ImgCover( &m_img_convert_ctx , frame , &apic , frame->width , frame->height , 
+			m_video_st->codec->pix_fmt , m_pVideoInfo->bmiHeader.biWidth , m_pVideoInfo->bmiHeader.biHeight , TransFmt( m_pDstFmt )  ) > 0 )
+		{
+			PutDataPool( m_picpool , &apic );
+		}
 	}
 
 end:
@@ -657,12 +663,7 @@ int CFeFFmpeg::GetVideoFrame( AVFrame *frame  )
 		int ret = 0;
 		return ret;
 	}
-	AVPicture apic;
-	if( ImgCover( &m_img_convert_ctx , frame , &apic , frame->width , frame->height , 
-		m_video_st->codec->pix_fmt , m_pVideoInfo->bmiHeader.biWidth , m_pVideoInfo->bmiHeader.biHeight , TransFmt( m_pDstFmt )  ) > 0 )
-	{
-		PutDataPool( m_picpool , &apic );
-	}
+
 
 	return 1;
 }
@@ -721,8 +722,14 @@ int CFeFFmpeg::DoAudioDecodeLoop()
 		}else{
 			avcodec_get_frame_defaults( frame );
 		}
-		GetAudioFrame( frame );
+		ret = GetAudioFrame( frame );
 		if( ret < 0 ) goto end;
+		if ( ret == 0 ) continue;
+		AUDIO_PACK *pack = m_sampleAudiopool->GetOneUnit( CObjPool<AUDIO_PACK>::OPCMD::WRITE_DATA );
+		memcpy( pack->audio_buf2 , frame->data[0] , ret );
+		pack->samplesize = ret;
+		m_sampleAudiopool->CommitOneUnit( pack , CObjPool<AUDIO_PACK>::OPCMD::WRITE_DATA );
+		
 	}
 	
 end:
@@ -743,6 +750,7 @@ int CFeFFmpeg::GetAudioFrame(AVFrame *frame)
 	int len1, len2, data_size, resampled_data_size;
 	int64_t dec_channel_layout;
 	int got_frame;
+	resampled_data_size = 0;
 	if ( IsFlushPacket( pkt ) )
 	{
 		avcodec_flush_buffers(m_audio_st->codec);
@@ -789,6 +797,6 @@ end:
 	if (pkt->data)
 		av_free_packet(pkt);
 	m_audiopool.CommitOneUnit( pkt , CObjPool<AVPacket>::OPCMD::READ_DATA );
-	return 0;
+	return resampled_data_size;
 }
 

@@ -353,8 +353,7 @@ CVideoOutPin::CVideoOutPin( CBaseFilter *pFilter , CCritSec *pLock , HRESULT *ph
 	:CFePushPin( NAME("video out pull pin") , pFilter , pLock , phr , L"video_out" ) , m_pAVPicturePool(pool) , m_pVideoinfo(videoinfo) ,
 	m_pvideoDstFmt(dstFmt)
 {
-	//m_pVideoinfo->bmiHeader.biHeight = DEFAULT_HEIGHT;
-	//m_pVideoinfo->bmiHeader.biWidth = DEFAULT_WIDTH;
+
 }
 
 CVideoOutPin::~CVideoOutPin()
@@ -595,19 +594,201 @@ STDMETHODIMP CVideoOutPin::Notify(IBaseFilter * pSender, Quality q)
 }
 
 //////////////////////////////////////////////////////////////////////////
+//audio out pin
+CAudioOutPin::CAudioOutPin(CBaseFilter *pFilter , CCritSec *pLock , HRESULT *phr , CObjPool<AUDIO_PACK> *audiopool , WAVEFORMATEX *pwafefmt)
+	:CFePushPin(NAME("audio pin out") , pFilter , pLock ,phr , L"audio_out" ) , m_pAudioPool(audiopool) , m_pwavFmt(pwafefmt)
+{
+
+}
+
+CAudioOutPin::~CAudioOutPin()
+{
+
+}
+
+HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
+{
+	BYTE *pData;
+	long cbData;
+	HRESULT hr = S_FALSE;
+	CAutoLock cAutoLock( &m_cSharedState );
+	CheckPointer(pSamp, E_POINTER);
+	pSamp->GetPointer(&pData);
+	cbData = pSamp->GetSize();
+	AUDIO_PACK *pkt = m_pAudioPool->GetOneUnit( CObjPool<AUDIO_PACK>::OPCMD::READ_DATA );
+	memcpy( pData , pkt->audio_buf2 , pkt->samplesize );	
+	m_pAudioPool->CommitOneUnit( pkt , CObjPool<AUDIO_PACK>::OPCMD::READ_DATA );
+
+	// The current time is the sample's start
+	CRefTime rtStart = m_rtSampleTime;
+	double dbsec = (double)pkt->samplesize / (double)m_pwavFmt->nAvgBytesPerSec ;
+	m_rtSampleTime = rtStart + dbsec * UNITS;
+	pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+	pSamp->SetActualDataLength( pkt->samplesize );
+	pSamp->SetSyncPoint(TRUE);
+	
+	return S_OK;
+}
+
+//impl CBaseOutputPin
+HRESULT CAudioOutPin::DecideBufferSize(IMemAllocator * pAlloc , __inout ALLOCATOR_PROPERTIES * ppropInputRequest)
+{
+	HRESULT hr;
+	CAutoLock cAutoLock(m_pLock);
+	CheckPointer(pAlloc, E_POINTER);
+	CheckPointer(ppropInputRequest, E_POINTER);
+	//m_nSpaceTime   =   m_waveFormat.nChannels*m_waveFormat.wBitsPerSample*m_waveFormat.nAvgBytesPerSec*24   /   8   /   1000;
+
+	// Ensure a minimum number of buffers
+	ppropInputRequest->cBuffers = 4;
+	ppropInputRequest->cbBuffer = AVCODEC_MAX_AUDIO_FRAME_SIZE * 4;
+	ppropInputRequest->cbAlign = 1; //框架好像会自动设置为1 ??
+	ASSERT( ppropInputRequest->cbBuffer );
+
+	// Ask the allocator to reserve us some sample memory. NOTE: the function
+	// can succeed (return NOERROR) but still not have allocated the
+	// memory that we requested, so we must check we got whatever we wanted.
+	ALLOCATOR_PROPERTIES Actual;
+	hr = pAlloc->SetProperties(ppropInputRequest, &Actual);
+	if (FAILED(hr)) 
+	{
+		return hr;
+	}
+
+	// Is this allocator unsuitable?
+	if (Actual.cbBuffer < ppropInputRequest->cbBuffer) 
+	{
+		return E_FAIL;
+	}
+
+	// Make sure that we have only 1 buffer (we erase the ball in the
+	// old buffer to save having to zero a 200k+ buffer every time
+	// we draw a frame)
+	//ASSERT(Actual.cBuffers == 1);
+
+	return S_OK;
+}
+
+HRESULT CAudioOutPin::GetMediaType(int iPosition, __inout CMediaType *pMediaType)
+{
+	CAutoLock cAutoLock(m_pLock);
+	CheckPointer(pMediaType, E_POINTER);
+
+	if(iPosition < 0)
+		return E_INVALIDARG;
+
+	// Have we run off the end of types?
+	if(iPosition > 0)
+		return VFW_S_NO_MORE_ITEMS;
+
+	WAVEFORMATEX *pWaveFmt = (WAVEFORMATEX*)pMediaType->AllocFormatBuffer( sizeof(WAVEFORMATEX) );
+
+	if(NULL == pWaveFmt)
+		return(E_OUTOFMEMORY);
+
+	ZeroMemory( pWaveFmt , sizeof(WAVEFORMATEX) );
+	pWaveFmt->cbSize = 0 /*sizeof(WAVEFORMATEX)*/;
+	pWaveFmt->wFormatTag = WAVE_FORMAT_PCM;
+	//todo 添加详细的参数
+	pWaveFmt->nChannels = m_pwavFmt->nChannels; //pNetSourceFilter->getWaveProp()->nChannels;   //共多少声道
+	pWaveFmt->wBitsPerSample = m_pwavFmt->wBitsPerSample; //pNetSourceFilter->getWaveProp()->wBitsPerSample; //每个样本多少位
+	pWaveFmt->nSamplesPerSec = m_pwavFmt->nSamplesPerSec; //22050; //pNetSourceFilter->getWaveProp()->nSamplesPerSec; //每秒采样多少样本
+
+	pWaveFmt->nBlockAlign = pWaveFmt->nChannels * pWaveFmt->wBitsPerSample / 8;
+	pWaveFmt->nAvgBytesPerSec = pWaveFmt->nBlockAlign * pWaveFmt->nSamplesPerSec;
+
+	pMediaType->SetType(&MEDIATYPE_Audio);
+	pMediaType->SetFormatType(&FORMAT_WaveFormatEx);
+	pMediaType->SetSubtype( &MEDIASUBTYPE_PCM /*MEDIASUBTYPE_WAVE*/ );
+	pMediaType->SetTemporalCompression(FALSE);
+	pMediaType->SetSampleSize( AVCODEC_MAX_AUDIO_FRAME_SIZE * 4 );
+	return S_OK;
+}
+
+HRESULT CAudioOutPin::SetMediaType(const CMediaType *pmt)
+{
+	__super::SetMediaType( pmt );
+	return S_OK;
+}
+
+HRESULT CAudioOutPin::OnThreadCreate(void)
+{
+	m_rtSampleTime = 0;
+	return S_OK;
+}
+
+STDMETHODIMP CAudioOutPin::EndOfStream(void)
+{
+	return S_OK;
+}
+
+STDMETHODIMP CAudioOutPin::BeginFlush(void)
+{
+	return S_OK;
+}
+
+STDMETHODIMP CAudioOutPin::EndFlush(void)
+{
+	return S_OK;
+}
+
+STDMETHODIMP CAudioOutPin::Notify(IBaseFilter * pSender, Quality q)
+{
+	return S_OK;
+}
+
+//impl CBasePin
+HRESULT CAudioOutPin::CheckMediaType(const CMediaType *pmt)
+{
+	CheckPointer(pmt,E_POINTER);
+
+	if((*(pmt->Type()) != MEDIATYPE_Audio) ||   // we only output video
+		!(pmt->IsFixedSize()))                  // in fixed size samples
+	{                                                  
+		return E_INVALIDARG;
+	}
+
+	// Check for the subtypes we support
+	const GUID *SubType = pmt->Subtype();
+	if (SubType == NULL)
+		return E_INVALIDARG;
+
+	if( !IsEqualGUID(*SubType , MEDIASUBTYPE_PCM ) )
+	{
+		return E_INVALIDARG;
+	}
+
+	// Get the format area of the media type
+	WAVEFORMATEX *wavefmt = (WAVEFORMATEX *) pmt->Format();
+
+	if(wavefmt == NULL)
+		return E_INVALIDARG;
+
+	return S_OK;
+}
+
+//////////////////////////////////////////////////////////////////////////
 //parserFilter
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
 	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
 	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
-	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ) //video out pin
+	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
+	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )
 {
 	InitPool( &m_bufpool , 10 , 131072 );
 	//m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt);
+
+	//开始设置视频,音频的属性
 	m_videoinfo.bmiHeader.biWidth = DEFAULT_WIDTH;
 	m_videoinfo.bmiHeader.biHeight = DEFAULT_HEIGHT;
 	m_videoinfo.AvgTimePerFrame = 500000;
+
+	m_waveFmt.nChannels = 2;
+	m_waveFmt.wBitsPerSample = 16;
+	m_waveFmt.nSamplesPerSec = 22050;
+	m_waveFmt.wFormatTag = WAVE_FORMAT_PCM;
 }
 
 
@@ -676,7 +857,7 @@ int CParseFilter::ProcOutConnect()
 
 int CParseFilter::GetPinCount()
 {
-	return 2;
+	return 3;
 }
 
 CBasePin * CParseFilter::GetPin(int n)
@@ -692,7 +873,7 @@ CBasePin * CParseFilter::GetPin(int n)
 			return &m_VideoOutPin;
 		}else if ( 2 == n )
 		{
-			return pin;
+			return &m_AudOutPin;
 		}
 	}
 	return NULL;

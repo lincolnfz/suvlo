@@ -21,6 +21,7 @@ struct UNIT_BUF_POOL
 	LONGLONG llRaw; //全部数量
 	LONGLONG llPosition; //当前的位置
 	double sec;
+	HANDLE hGetQueueMutex;
 };
 
 	/************************************************************************/

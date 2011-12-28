@@ -118,6 +118,7 @@ unsigned CALLBACK CWrapmms::recvdata( void *arge )
 		pMMS->m_pBufpool->llRaw = pMMS->m_filelen;		
 		pMMS->m_pFilter->NotifyEvent( WM_APP + 100 , NULL , NULL );
 		char* buf = (char*)malloc(RECV_BUF_SIZE);
+		//HANDLE hOpenFile = CreateFile( NAME("c:\\cc.wmv") , GENERIC_WRITE , 0 , 0 , CREATE_ALWAYS , OPEN_ALWAYS , 0 );
 		while(  true )
 		{		
 			/*
@@ -136,8 +137,11 @@ unsigned CALLBACK CWrapmms::recvdata( void *arge )
 			{
 				break;
 			}
+			//SetFilePointer( hOpenFile , 0 , 0 , FILE_END);
+			//WriteFile( hOpenFile , buf , nlen , &dwrite , NULL );
 
 		}
+		//CloseHandle(hOpenFile);
 		free(buf);
 	}
 	//CloseHandle( hOpenFile );

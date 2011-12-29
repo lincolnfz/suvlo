@@ -1,4 +1,5 @@
 #include "bufpool.h"
+#include <Streams.h>
 
 //////////////////////////////////////////////////////////////////////////
 //缓冲池
@@ -6,6 +7,7 @@ void InitPool( UNIT_BUF_POOL* pool, int units , long unit_size )
 {
 	pool->sec = 0.0;
 	pool->llRaw = 0;
+	pool->eof = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
 	initDataLink(&pool->pEmptyLink);
@@ -20,12 +22,13 @@ void InitPool( UNIT_BUF_POOL* pool, int units , long unit_size )
 		pool->pList[idx].eof = 0;
 		pool->pList[idx].size = pool->unit_size;
 		pool->pList[idx].position = 0;
+		pool->pList[idx].idx = idx;
 		pool->pList[idx].pHead = new char[pool->pList[idx].size];
+		pool->pList[idx].pCur = pool->pList[idx].pHead;
 		DataNode<UNIT_BUF*> *pnode = new DataNode<UNIT_BUF*>;
 		pnode->pData = &pool->pList[idx];
 		putDataLink( pool->pEmptyLink , pnode );
 	}
-	pool->hGetQueueMutex = CreateMutex( NULL , FALSE , NULL );
 
 }
 
@@ -43,12 +46,12 @@ void DestoryPool( UNIT_BUF_POOL* pool)
 	pool->units = 0;
 	destoryDataLink(&pool->pEmptyLink);
 	destoryDataLink(&pool->pFullLink);
-	CloseHandle( pool->hGetQueueMutex );
 }
 
 void ResetPool( UNIT_BUF_POOL* pool){
 	pool->sec = 0.0;
 	pool->llRaw = 0;
+	pool->eof = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
 	int idx = 0;
@@ -58,6 +61,7 @@ void ResetPool( UNIT_BUF_POOL* pool){
 		pool->pList[idx].eof = 0;
 		pool->pList[idx].position = 0;
 		pool->pList[idx].size = pool->unit_size;
+		pool->pList[idx].pCur = pool->pList[idx].pHead;
 	}
 }
 
@@ -79,13 +83,14 @@ DataNode<UNIT_BUF*> *GetReadUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSta
 	{
 		goto get;
 	}
-	//pUnit->pData->opsize = 0;
 	putDataLink( pool->pEmptyLink , pUnit );
+	DbgLog((LOG_TRACE, 0, TEXT("put write %d\r"), pUnit->pData->idx ));
 
 newinstance:
 	pUnit = getDataLink( pool->pFullLink );
 	pUnit->pData->opsize = 0;
-
+	pUnit->pData->pCur = pUnit->pData->pHead;
+	DbgLog((LOG_TRACE, 0, TEXT("get read %d\r"), pUnit->pData->idx ));
 get:
 	return pUnit;
 }
@@ -104,15 +109,16 @@ DataNode<UNIT_BUF*> *GetWriteUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSt
 	{
 		goto get;
 	}
-	//pUnit->pData->opsize = 0;
 	LONGLONG llpos = pUnit->pData->position;
 	putDataLink( pool->pFullLink , pUnit );
+	DbgLog((LOG_TRACE, 0, TEXT("put read %d\r"), pUnit->pData->idx ));
 
 newinstance:
 	pUnit = getDataLink( pool->pEmptyLink );
 	pUnit->pData->opsize = 0;
+	pUnit->pData->pCur = pUnit->pData->pHead;
 	pUnit->pData->position += pool->unit_size;
-
+	DbgLog((LOG_TRACE, 0, TEXT("get write %d\r"), pUnit->pData->idx ));
 get:
 	return pUnit;
 }
@@ -120,9 +126,9 @@ get:
 //如果 len <=0 说明已经没有数据
 long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 {	
-	//CFeLockMutex( pool->hGetQueueMutex );
 	long total = 0;
 	UNIT_BUF *pBufUnit = NULL;
+	char *psrcbuf = srcbuf;
 	while( len > 0 ){
 		long remain = 0;
 		long lop = 0;
@@ -130,7 +136,10 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 		pBufUnit = pool->pWrite->pData;
 		remain = pBufUnit->size - pBufUnit->opsize;
 		lop = (remain >= len) ? len : remain;
-		CopyMemory( pBufUnit->pHead + pBufUnit->opsize , srcbuf , lop );
+		//CopyMemory( pBufUnit->pHead + pBufUnit->opsize , srcbuf , lop );
+		CopyMemory( pBufUnit->pCur , psrcbuf , lop );
+		psrcbuf += lop;   //note it's important
+		pBufUnit->pCur += lop;
 		pBufUnit->opsize += lop;
 		len -= lop;
 		total += lop;
@@ -140,7 +149,6 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 		pool->pWrite = GetWriteUnit( pool , pool->pWrite );
 		pool->pWrite->pData->eof = 1;
 		pool->pWrite->pData->size = pool->pWrite->pData->opsize;
-		pool->pWrite->pData->opsize = 0;
 		putDataLink( pool->pFullLink , pool->pWrite );
 		pool->pWrite = NULL;
 	}
@@ -150,9 +158,13 @@ long WriteData( UNIT_BUF_POOL *pool , char *srcbuf , long len )
 
 long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 {
-	//CFeLockMutex( pool->hGetQueueMutex );
-	long total = 0;
+	long total = 0;	
 	UNIT_BUF *pBufUnit = NULL;
+	if ( pool->eof )
+	{
+		return total;
+	}
+	char *pDstCurr = dstbuf;
 	while( len > 0 ){
 		long remain = 0;
 		long lop = 0;
@@ -162,17 +174,20 @@ long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 		lop = (remain >= len) ? len : remain;
 		if ( lop > 0 )
 		{
-			CopyMemory( dstbuf , pBufUnit->pHead + pBufUnit->opsize , lop );
+			//CopyMemory( dstbuf , pBufUnit->pHead + pBufUnit->opsize , lop );
+			CopyMemory( pDstCurr , pBufUnit->pCur , lop );
+			pDstCurr += lop; //note it's important
+			pBufUnit->pCur += lop;
 			pBufUnit->opsize += lop;
 			len -= lop;
 			total += lop;
 			pool->llPosition = pool->pRead->pData->position + pool->pRead->pData->opsize; //设置当前内存池总的偏移量
 		}else{
-			pool->pRead->pData->eof = 0;			
+			pool->pRead->pData->eof = 0;	
 			pool->pRead->pData->size = pool->unit_size;
-			pool->pRead->pData->opsize = 0;
 			putDataLink( pool->pEmptyLink , pool->pRead );
 			pool->pRead = NULL;
+			pool->eof = 1;
 			break;
 		}
 

@@ -9,6 +9,8 @@ struct UNIT_BUF
 	int eof; //这是结束的单元队列 1结束
 	LONGLONG position; //当前队列基址
 	char *pHead;
+	char *pCur;
+	int idx;
 };
 
 struct UNIT_BUF_POOL
@@ -21,7 +23,7 @@ struct UNIT_BUF_POOL
 	LONGLONG llRaw; //全部数量
 	LONGLONG llPosition; //当前的位置
 	double sec;
-	HANDLE hGetQueueMutex;
+	int eof;
 };
 
 	/************************************************************************/

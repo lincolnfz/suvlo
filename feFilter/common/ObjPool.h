@@ -106,6 +106,7 @@ public:
 		m_size = size;
 		m_pEmptyList = NULL;
 		m_pFullList = NULL;
+		m_eof = 0;
 		Init( m_units , m_size );
 	}
 	virtual ~CObjPool(){
@@ -172,10 +173,11 @@ protected:
 		{
 			return pNode;
 		}
-		pNode->pData->Resetcursor();
+		//pNode->pData->Resetcursor();
 		putDataLink( m_pEmptyList , pNode ); //数据读完,归返给空队列
 getnew:
 		pNode = getDataLink( m_pFullList );
+		pNode->pData->Resetcursor();
 		return pNode;
 	}
 
@@ -191,11 +193,12 @@ getnew:
 		{
 			return pNode;
 		}
-		pNode->pData->Resetcursor();
+		//pNode->pData->Resetcursor();
 		ll = pNode->pData->GetPosition();
 		putDataLink( m_pFullList , pNode ); //数据写满,归还给完成队列
 getnew:
 		pNode = getDataLink( m_pEmptyList );
+		pNode->pData->Resetcursor();
 		pNode->pData->SetPosition( ll + m_size );
 		return pNode;
 	}
@@ -244,14 +247,18 @@ public:
 		return 0;
 	}
 
+	int SetEof( int eof ){ m_eof = eof; }
+
+	int GetEof(){ return m_eof; }
 	
 
 protected:
 	CObjQueue<T> *m_pObjCollect;
 	DataLink<CObjQueue<T>*> *m_pEmptyList , *m_pFullList;
 	DataNode<CObjQueue<T>*> *m_pWrite , *m_pRead;
-	int m_units;
 	long m_size;
+	int m_units;	
+	int m_eof;
 };
 
 template< class T>

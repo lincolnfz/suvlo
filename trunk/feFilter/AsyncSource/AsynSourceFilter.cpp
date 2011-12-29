@@ -479,8 +479,9 @@ STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 	m_wrapmms.openfile( lpurl );
 	delete []lpurl;
 
-	//_beginthreadex( NULL , 0 , CheckThread , this , 0 , 0 );
+	_beginthreadex( NULL , 0 , CheckThread , this , 0 , 0 );
 
+	/*
 	BYTE buf[20480];
 	DWORD len,dwrite;
 	HANDLE hOpenFile = CreateFile( NAME("c:\\aa.wmv") , GENERIC_WRITE , 0 , 0 , CREATE_ALWAYS , OPEN_ALWAYS , 0 );
@@ -495,6 +496,7 @@ STDMETHODIMP CAsynSourceFilter::Play( LPCWSTR url )
 		WriteFile( hOpenFile , buf , len , &dwrite , NULL );
 	}
 	CloseHandle( hOpenFile );
+	*/
 
 	return S_OK;
 }

@@ -1,6 +1,7 @@
 #ifndef _OBJPOOL_H_
 #define _OBJPOOL_H_
 #include "feUtil.h"
+#include <Wxdebug.h>
 /**
 对像池
 */
@@ -136,7 +137,8 @@ protected:
 			pNode->pData = &m_pObjCollect[idx];
 			putDataLink( m_pEmptyList , pNode );
 		}
-
+		m_total = units * size;
+		m_cur = 0;
 		return 0;
 	}
 
@@ -235,10 +237,13 @@ public:
 		if ( op == READ_DATA )
 		{			
 			this->m_pRead->pData->CommitData();
+			--m_cur;
 		}else if ( op == WRITE_DATA )
 		{			
 			this->m_pWrite->pData->CommitData();
+			++m_cur;
 		}
+		DbgLog((LOG_TRACE, 0, TEXT("pool cap -----: %ld\r"), m_cur ));
 		return 0;
 	}
 
@@ -256,6 +261,8 @@ protected:
 	CObjQueue<T> *m_pObjCollect;
 	DataLink<CObjQueue<T>*> *m_pEmptyList , *m_pFullList;
 	DataNode<CObjQueue<T>*> *m_pWrite , *m_pRead;
+	long m_total;
+	long m_cur; //池的当前负载指标
 	long m_size;
 	int m_units;	
 	int m_eof;

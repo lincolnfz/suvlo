@@ -65,6 +65,7 @@ protected:
 
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
 //推模式接口
 class CFePushPin : public CAMThread , public CBaseOutputPin
 {
@@ -164,7 +165,6 @@ protected:
 	CRefTime m_rtSampleTime;
 	REFERENCE_TIME m_iDefaultRepeatTime;
 	REFERENCE_TIME m_iRepeatTime;
-	CCritSec m_cSharedState;
 };
 
 class CAudioOutPin : public CFePushPin
@@ -190,7 +190,6 @@ public:
 protected:
 	CObjPool<AUDIO_PACK> *m_pAudioPool;
 	WAVEFORMATEX *m_pwavFmt;
-	CCritSec m_cSharedState;
 	CRefTime m_rtSampleTime;
 };
 
@@ -200,6 +199,7 @@ class CParseFilter : public CBaseFilter
 protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
+	CCritSec m_csInPin;
 	CFeFFmpeg *m_pffmpeg;
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;

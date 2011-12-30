@@ -243,7 +243,7 @@ public:
 			this->m_pWrite->pData->CommitData();
 			++m_cur;
 		}
-		DbgLog((LOG_TRACE, 0, TEXT("pool cap -----: %ld\r"), m_cur ));
+		//DbgLog((LOG_TRACE, 0, TEXT("pool cap -----: %ld\r"), m_cur ));
 		return 0;
 	}
 

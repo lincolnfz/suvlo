@@ -378,7 +378,7 @@ CBasePin * CAsynReader::GetPin(int n)
 //asyncfilter
 
 CAsynSourceFilter::CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr) : CAsynReader(NAME("feIO Reader") , pUnk , &m_feBufPool , phr),
-	m_wrapmms( m_feBufPool.getPool() , this )
+	m_feBufPool(4,32768), m_wrapmms( m_feBufPool.getPool() , this )
 {
 
 }

@@ -84,13 +84,13 @@ DataNode<UNIT_BUF*> *GetReadUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSta
 		goto get;
 	}
 	putDataLink( pool->pEmptyLink , pUnit );
-	DbgLog((LOG_TRACE, 0, TEXT("put write %d\r"), pUnit->pData->idx ));
+	//DbgLog((LOG_TRACE, 0, TEXT("put write %d\r"), pUnit->pData->idx ));
 
 newinstance:
 	pUnit = getDataLink( pool->pFullLink );
 	pUnit->pData->opsize = 0;
 	pUnit->pData->pCur = pUnit->pData->pHead;
-	DbgLog((LOG_TRACE, 0, TEXT("get read %d\r"), pUnit->pData->idx ));
+	//DbgLog((LOG_TRACE, 0, TEXT("get read %d\r"), pUnit->pData->idx ));
 get:
 	return pUnit;
 }
@@ -111,14 +111,14 @@ DataNode<UNIT_BUF*> *GetWriteUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSt
 	}
 	LONGLONG llpos = pUnit->pData->position;
 	putDataLink( pool->pFullLink , pUnit );
-	DbgLog((LOG_TRACE, 0, TEXT("put read %d\r"), pUnit->pData->idx ));
+	//DbgLog((LOG_TRACE, 0, TEXT("put read %d\r"), pUnit->pData->idx ));
 
 newinstance:
 	pUnit = getDataLink( pool->pEmptyLink );
 	pUnit->pData->opsize = 0;
 	pUnit->pData->pCur = pUnit->pData->pHead;
 	pUnit->pData->position += pool->unit_size;
-	DbgLog((LOG_TRACE, 0, TEXT("get write %d\r"), pUnit->pData->idx ));
+	//DbgLog((LOG_TRACE, 0, TEXT("get write %d\r"), pUnit->pData->idx ));
 get:
 	return pUnit;
 }

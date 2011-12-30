@@ -32,6 +32,9 @@ HRESULT CDataPull::Receive(IMediaSample* pSample)
 	BYTE *pbyte = NULL;
 	pSample->GetPointer( &pbyte );
 	WriteData( m_pbufpool , (char*)pbyte , lActualDateLen );
+	static int times = 0;
+	++times;
+	DbgLog((LOG_TRACE, 0, TEXT("recv data -----: %d\r"), times ));
 	return S_OK;
 }
 
@@ -363,7 +366,7 @@ CVideoOutPin::~CVideoOutPin()
 
 //ÉêÃ÷sample´óÐ¡
 HRESULT CVideoOutPin::DecideBufferSize(IMemAllocator * pAlloc,__inout ALLOCATOR_PROPERTIES * ppropInputRequest)
-{
+{	
 	CheckPointer(pAlloc, E_POINTER);
 	CheckPointer(ppropInputRequest, E_POINTER);
 	HRESULT hr;
@@ -556,7 +559,7 @@ STDMETHODIMP CVideoOutPin::EndOfStream(void)
 HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 {
 	CheckPointer(pSamp, E_POINTER);
-	CAutoLock cAutoLock( &m_cSharedState );
+	CAutoLock cAutoLock( m_pLock );
 	BYTE *pData;
 	long cbData;
 	// Access the sample's data buffer
@@ -569,6 +572,8 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 
 	memcpy( pData , pict->data[0] , pict->linesize[0]*m_pVideoinfo->bmiHeader.biHeight  );
 	pSamp->SetActualDataLength( pict->linesize[0]*m_pVideoinfo->bmiHeader.biHeight );
+	avpicture_free( pict );
+	m_pAVPicturePool->CommitOneUnit( pict , CObjPool<AVPicture>::OPCMD::READ_DATA );
 
 	// The current time is the sample's start
 	CRefTime rtStart = m_rtSampleTime;
@@ -579,8 +584,9 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 
 	pSamp->SetSyncPoint(TRUE);
 
-	avpicture_free( pict );
-	m_pAVPicturePool->CommitOneUnit( pict , CObjPool<AVPicture>::OPCMD::READ_DATA );
+	static int times = 0;
+	++times;
+	DbgLog((LOG_TRACE, 0, TEXT("video out -----: %d\r"), times ));
 	return S_OK;
 }
 
@@ -611,7 +617,7 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	BYTE *pData;
 	long cbData;
 	HRESULT hr = S_FALSE;
-	CAutoLock cAutoLock( &m_cSharedState );
+	CAutoLock cAutoLock( m_pLock );
 	CheckPointer(pSamp, E_POINTER);
 	pSamp->GetPointer(&pData);
 	cbData = pSamp->GetSize();
@@ -627,6 +633,9 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	pSamp->SetActualDataLength( pkt->samplesize );
 	pSamp->SetSyncPoint(TRUE);
 	
+	static int times = 0;
+	++times;
+	DbgLog((LOG_TRACE, 0, TEXT("audio out -----: %d\r"), times ));
 	return S_OK;
 }
 
@@ -772,7 +781,7 @@ HRESULT CAudioOutPin::CheckMediaType(const CMediaType *pmt)
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
-	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
+	m_DataInputPin( this, &m_csInPin , phr ,&m_bufpool , m_pffmpeg ) ,
 	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
 	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
 	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )

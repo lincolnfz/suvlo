@@ -378,7 +378,7 @@ CBasePin * CAsynReader::GetPin(int n)
 //asyncfilter
 
 CAsynSourceFilter::CAsynSourceFilter(LPUNKNOWN pUnk, HRESULT *phr) : CAsynReader(NAME("feIO Reader") , pUnk , &m_feBufPool , phr),
-	m_feBufPool(4,32768), m_wrapmms( m_feBufPool.getPool() , this )
+	m_feBufPool(20,32768), m_wrapmms( m_feBufPool.getPool() , this )
 {
 
 }
@@ -442,13 +442,13 @@ int CAsynSourceFilter::notifyDownRecv()
 					IPin *precv;
 					//connect video					
 					IBaseFilter *renderfilter;
-					/*
+				
 					pfilterGraph->FindFilterByName( filterNam[1] , &renderfilter );					
 					parser->FindPin( L"video_out" , &pin );
 					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
 					hr = pin->Connect( precv , NULL );					
 					renderfilter->Release();
-					*/
+					
 
 					//connect audio
 					

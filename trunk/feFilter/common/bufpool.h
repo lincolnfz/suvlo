@@ -24,6 +24,10 @@ struct UNIT_BUF_POOL
 	LONGLONG llPosition; //当前的位置
 	double sec;
 	int eof;
+	int topNotify;
+	int lessNotify;
+	HANDLE almost;
+	HANDLE bare;
 };
 
 	/************************************************************************/
@@ -51,5 +55,9 @@ struct UNIT_BUF_POOL
 	池的数据写出dstbuf
 	*/
 	long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len );
+
+	int WaitAlmost( UNIT_BUF_POOL *pool , DWORD timeout = INFINITE );
+
+	int WaitBare( UNIT_BUF_POOL *pool , DWORD timeout = INFINITE);
 
 #endif //_BUFPOOL_H_

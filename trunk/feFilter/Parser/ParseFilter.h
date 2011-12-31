@@ -200,6 +200,8 @@ protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
 	CCritSec m_csInPin;
+	CCritSec m_csVoutPin;
+	CCritSec m_csAoutPin;
 	CFeFFmpeg *m_pffmpeg;
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;
@@ -212,6 +214,8 @@ protected:
 	UNIT_BUF_POOL m_bufpool;
 	CObjPool<AVPicture> m_picpool;
 	CObjPool<AUDIO_PACK> m_audiopool;
+	HANDLE m_hSyncAlmost[2];
+	
 	//CObjPool<>
 public:
 	CParseFilter(LPUNKNOWN pUnk, HRESULT *phr);
@@ -220,6 +224,11 @@ public:
 	static CUnknown * WINAPI CreateInstance(LPUNKNOWN, HRESULT *);
 	static unsigned int __stdcall CheckOutThread( void *arg );
 	int ProcOutConnect();
+
+	static unsigned int __stdcall CheckAlmostThread( void *arg );
+	int NotifyStartSync();
+
+	HANDLE* GetHandleArray(){ return m_hSyncAlmost; }
 
 	STDMETHODIMP Run(REFERENCE_TIME tStart);
 	// you need to supply these to access the pins from the enumerator

@@ -13,8 +13,8 @@
 #pragma comment( lib , "../../lib/avutil.lib" )
 #pragma comment( lib , "../../lib/swscale.lib" )
 
-const int UNITQUEUE = 5;
-const long UNITSIZE = 30;
+const int UNITQUEUE = 8;
+const long UNITSIZE = 10;
 
 CFeFFmpeg *g_pFeFFmpeg = NULL;
 CFeFFmpeg* CFeFFmpeg::m_pFeFFmpeg = NULL;
@@ -508,7 +508,7 @@ int CFeFFmpeg::DoProcessingLoop()
 	}
 
 	if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
-		ret= stream_component_open(st_index[AVMEDIA_TYPE_VIDEO]);
+		//ret= stream_component_open(st_index[AVMEDIA_TYPE_VIDEO]);
 	}
 
 	if (st_index[AVMEDIA_TYPE_SUBTITLE] >= 0) {
@@ -566,7 +566,8 @@ int CFeFFmpeg::DoProcessingLoop()
 		if (pkt->stream_index == m_audio_stream && pkt_in_play_range) {
 			PutDataPool( &m_audiopool , pkt );
 		} else if (pkt->stream_index == m_video_stream && pkt_in_play_range) {
-			PutDataPool( &m_videopool , pkt );
+			//PutDataPool( &m_videopool , pkt );
+			av_free_packet(pkt);
 		} else if (pkt->stream_index == m_subtitle_stream && pkt_in_play_range) {
 			//暂不支持播放字幕
 			av_free_packet(pkt);

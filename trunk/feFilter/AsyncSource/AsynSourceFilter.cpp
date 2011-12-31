@@ -442,19 +442,22 @@ int CAsynSourceFilter::notifyDownRecv()
 					IPin *precv;
 					//connect video					
 					IBaseFilter *renderfilter;
-					pfilterGraph->FindFilterByName( filterNam[1] , &renderfilter );
-					
+					/*
+					pfilterGraph->FindFilterByName( filterNam[1] , &renderfilter );					
 					parser->FindPin( L"video_out" , &pin );
 					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
 					hr = pin->Connect( precv , NULL );					
 					renderfilter->Release();
+					*/
 
 					//connect audio
+					
 					pfilterGraph->FindFilterByName( filterNam[2] , &renderfilter );
 					parser->FindPin( L"audio_out" , &pin );
 					GetUnconnectedPin( renderfilter , PINDIR_INPUT , &precv );
 					hr = pin->Connect( precv , NULL );	
 					renderfilter->Release();
+					
 
 					IMediaFilter *pmedia;
 					pfilterGraph->QueryInterface( IID_IMediaFilter , (void**)&pmedia );

@@ -781,7 +781,7 @@ HRESULT CAudioOutPin::CheckMediaType(const CMediaType *pmt)
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
-	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
+	m_DataInputPin( this, &m_csInPin , phr ,&m_bufpool , m_pffmpeg ) ,
 	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
 	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
 	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )
@@ -866,7 +866,7 @@ int CParseFilter::ProcOutConnect()
 
 int CParseFilter::GetPinCount()
 {
-	return 3;
+	return 2;
 }
 
 CBasePin * CParseFilter::GetPin(int n)
@@ -879,7 +879,7 @@ CBasePin * CParseFilter::GetPin(int n)
 		{
 			return &m_DataInputPin;
 		}else if( 1 == n ){
-			return &m_VideoOutPin;
+			return &m_AudOutPin;//m_VideoOutPin;
 		}else if ( 2 == n )
 		{
 			return &m_AudOutPin;

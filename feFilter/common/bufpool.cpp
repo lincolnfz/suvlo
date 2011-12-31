@@ -15,6 +15,10 @@ void InitPool( UNIT_BUF_POOL* pool, int units , long unit_size )
 	pool->units = units;
 	pool->unit_size = unit_size;
 	pool->pList = new UNIT_BUF[ pool->units ];
+	pool->almost = CreateEvent( NULL , FALSE , FALSE , NULL );
+	pool->bare = CreateEvent( NULL , FALSE , FALSE , NULL );
+	pool->lessNotify = units / 3;
+	pool->topNotify = units - pool->lessNotify;
 	int idx = 0;
 	for ( idx = 0 ; idx < pool->units ; ++idx )
 	{	
@@ -46,6 +50,8 @@ void DestoryPool( UNIT_BUF_POOL* pool)
 	pool->units = 0;
 	destoryDataLink(&pool->pEmptyLink);
 	destoryDataLink(&pool->pFullLink);
+	CloseHandle( pool->almost );
+	CloseHandle( pool->bare );
 }
 
 void ResetPool( UNIT_BUF_POOL* pool){
@@ -54,6 +60,8 @@ void ResetPool( UNIT_BUF_POOL* pool){
 	pool->eof = 0;
 	pool->pRead = NULL;
 	pool->pWrite = NULL;
+	WaitForSingleObject( pool->almost , 100 );
+	WaitForSingleObject( pool->bare , 100 );
 	int idx = 0;
 	for ( idx = 0 ; idx < pool->units ; ++idx )
 	{
@@ -85,6 +93,10 @@ DataNode<UNIT_BUF*> *GetReadUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSta
 	}
 	putDataLink( pool->pEmptyLink , pUnit );
 	//DbgLog((LOG_TRACE, 0, TEXT("put write %d\r"), pUnit->pData->idx ));
+	if ( pool->pEmptyLink->nb_size >= pool->topNotify )
+	{
+		SetEvent( pool->bare );
+	}
 
 newinstance:
 	pUnit = getDataLink( pool->pFullLink );
@@ -112,6 +124,10 @@ DataNode<UNIT_BUF*> *GetWriteUnit(UNIT_BUF_POOL *pool , DataNode<UNIT_BUF*> *pSt
 	LONGLONG llpos = pUnit->pData->position;
 	putDataLink( pool->pFullLink , pUnit );
 	//DbgLog((LOG_TRACE, 0, TEXT("put read %d\r"), pUnit->pData->idx ));
+	if ( pool->pFullLink->nb_size >= pool->topNotify )
+	{
+		SetEvent( pool->almost );
+	}
 
 newinstance:
 	pUnit = getDataLink( pool->pEmptyLink );
@@ -193,4 +209,18 @@ long ReadData( UNIT_BUF_POOL *pool , char *dstbuf , long len )
 
 	}
 	return total;
+}
+
+int WaitAlmost( UNIT_BUF_POOL *pool , DWORD timeout )
+{
+	DWORD ret = WaitForSingleObject( pool->almost , timeout );
+	ret -= WAIT_OBJECT_0;
+	return ret;
+}
+
+int WaitBare( UNIT_BUF_POOL *pool , DWORD timeout )
+{
+	DWORD ret = WaitForSingleObject( pool->bare , timeout );
+	ret -= WAIT_OBJECT_0;
+	return ret;
 }

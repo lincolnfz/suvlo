@@ -558,6 +558,15 @@ STDMETHODIMP CVideoOutPin::EndOfStream(void)
 
 HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 {
+	static int times = 0;
+	CParseFilter *parserFilter = dynamic_cast<CParseFilter*>(m_pFilter);
+	if ( 0 == times )
+	{
+		HANDLE *hevent = parserFilter->GetHandleArray();
+		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
+	}
+	++times;
+
 	CheckPointer(pSamp, E_POINTER);
 	CAutoLock cAutoLock( m_pLock );
 	BYTE *pData;
@@ -584,8 +593,6 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 
 	pSamp->SetSyncPoint(TRUE);
 
-	static int times = 0;
-	++times;
 	DbgLog((LOG_TRACE, 0, TEXT("video out -----: %d\r"), times ));
 	return S_OK;
 }
@@ -614,6 +621,14 @@ CAudioOutPin::~CAudioOutPin()
 
 HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 {
+	static int times = 0;
+	CParseFilter *parserFilter = dynamic_cast<CParseFilter*>(m_pFilter);
+	if ( 0 == times )
+	{
+		HANDLE *hevent = parserFilter->GetHandleArray();
+		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
+	}
+	++times;
 	BYTE *pData;
 	long cbData;
 	HRESULT hr = S_FALSE;
@@ -633,8 +648,6 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	pSamp->SetActualDataLength( pkt->samplesize );
 	pSamp->SetSyncPoint(TRUE);
 	
-	static int times = 0;
-	++times;
 	DbgLog((LOG_TRACE, 0, TEXT("audio out -----: %d\r"), times ));
 	return S_OK;
 }
@@ -782,12 +795,14 @@ CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
 	m_DataInputPin( this, &m_csInPin , phr ,&m_bufpool , m_pffmpeg ) ,
-	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
+	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(5,2),
 	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
 	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )
 {
 	InitPool( &m_bufpool , 10 , 131072 );
 	//m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt);
+	m_hSyncAlmost[0] = CreateEvent( NULL , FALSE , FALSE , NULL );
+	m_hSyncAlmost[1] = CreateEvent( NULL , FALSE , FALSE , NULL );
 
 	//开始设置视频,音频的属性
 	m_videoinfo.bmiHeader.biWidth = DEFAULT_WIDTH;
@@ -804,6 +819,8 @@ CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 CParseFilter::~CParseFilter(void)
 {
 	DestoryPool( &m_bufpool );
+	CloseHandle( m_hSyncAlmost[0] );
+	CloseHandle( m_hSyncAlmost[1] );
 	CFeFFmpeg::Destory();
 }
 
@@ -825,6 +842,7 @@ STDMETHODIMP CParseFilter::Run(REFERENCE_TIME tStart)
 {
 	HRESULT hr = CBaseFilter::Run( tStart );
 	_beginthreadex( NULL , 0 , CheckOutThread , this , 0 , 0 );
+	_beginthreadex( NULL , 0 , CheckAlmostThread , this , 0 , 0 );
 	return hr;
 }
 
@@ -864,9 +882,25 @@ int CParseFilter::ProcOutConnect()
 	return 0;
 }
 
+unsigned int CParseFilter::CheckAlmostThread( void *arg )
+{
+	CParseFilter *pFilter = (CParseFilter*)arg;
+	pFilter->NotifyStartSync();
+	return 0;
+}
+
+int CParseFilter::NotifyStartSync()
+{
+	m_picpool.WaitAlmost();
+	m_audiopool.WaitAlmost();
+	SetEvent( m_hSyncAlmost[0] );
+	SetEvent( m_hSyncAlmost[1] );
+	return 0;
+}
+
 int CParseFilter::GetPinCount()
 {
-	return 2;
+	return 3;
 }
 
 CBasePin * CParseFilter::GetPin(int n)
@@ -879,7 +913,7 @@ CBasePin * CParseFilter::GetPin(int n)
 		{
 			return &m_DataInputPin;
 		}else if( 1 == n ){
-			return &m_AudOutPin;//m_VideoOutPin;
+			return &m_VideoOutPin;
 		}else if ( 2 == n )
 		{
 			return &m_AudOutPin;

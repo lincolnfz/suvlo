@@ -139,6 +139,10 @@ protected:
 		}
 		m_total = units * size;
 		m_cur = 0;
+		m_lessRange = units / 3;
+		m_topRange = units - m_lessRange;
+		m_hAlmost = CreateEvent( NULL , FALSE , FALSE , NULL );
+		m_hBare = CreateEvent( NULL , FALSE , FALSE , NULL );
 		return 0;
 	}
 
@@ -157,6 +161,8 @@ protected:
 		m_pObjCollect = NULL;
 		m_pWrite = NULL;
 		m_pRead = NULL;
+		CloseHandle( m_hAlmost );
+		CloseHandle( m_hBare );
 		return 0;
 	}
 
@@ -177,6 +183,10 @@ protected:
 		}
 		//pNode->pData->Resetcursor();
 		putDataLink( m_pEmptyList , pNode ); //数据读完,归返给空队列
+		if ( m_pEmptyList->nb_size >= m_topRange )
+		{
+			SetEvent( m_hBare );
+		}
 getnew:
 		pNode = getDataLink( m_pFullList );
 		pNode->pData->Resetcursor();
@@ -198,6 +208,10 @@ getnew:
 		//pNode->pData->Resetcursor();
 		ll = pNode->pData->GetPosition();
 		putDataLink( m_pFullList , pNode ); //数据写满,归还给完成队列
+		if ( m_pFullList->nb_size >= m_topRange )
+		{
+			SetEvent( m_hAlmost );
+		}
 getnew:
 		pNode = getDataLink( m_pEmptyList );
 		pNode->pData->Resetcursor();
@@ -255,6 +269,16 @@ public:
 	int SetEof( int eof ){ m_eof = eof; }
 
 	int GetEof(){ return m_eof; }
+
+	DWORD WaitAlmost( DWORD timeout = INFINITE ){
+		 DWORD ret = WaitForSingleObject( m_hAlmost , timeout ) - WAIT_OBJECT_0;
+		 return ret;
+	}
+
+	DWORD WaitBare( DWORD timeout = INFINITE ){
+		DWORD ret = WaitForSingleObject( m_hBare , timeout ) - WAIT_OBJECT_0;
+		return ret;
+	}
 	
 
 protected:
@@ -266,6 +290,10 @@ protected:
 	long m_size;
 	int m_units;	
 	int m_eof;
+	int m_topRange;
+	int m_lessRange;
+	HANDLE m_hAlmost;
+	HANDLE m_hBare;
 };
 
 template< class T>

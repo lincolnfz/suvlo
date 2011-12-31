@@ -24,6 +24,12 @@ HRESULT CFeBufPool::SetPointer(LONGLONG llPos)
 
 HRESULT CFeBufPool::Read(PBYTE pbBuffer, DWORD dwBytesToRead, BOOL bAlign, LPDWORD pdwBytesRead)
 {
+	static int times = 0;
+	if ( times == 0 )
+	{		
+		WaitAlmost();
+	}
+	++times;
 	*pdwBytesRead = ReadData( &m_poolbuf , (PCHAR)pbBuffer , dwBytesToRead );
 	return S_OK;
 }
@@ -48,4 +54,9 @@ void CFeBufPool::Lock()
 void CFeBufPool::Unlock()
 {
 	m_csLock.Unlock();
+}
+
+int CFeBufPool::WaitAlmost( )
+{
+	return ::WaitAlmost( &m_poolbuf );
 }

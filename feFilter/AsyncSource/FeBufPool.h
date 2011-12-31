@@ -18,6 +18,7 @@ public:
 	virtual DWORD Alignment();
 	virtual void Lock();
 	virtual void Unlock();
+	int WaitAlmost( );
 
 	//À©Õ¹·½·¨
 	UNIT_BUF_POOL *getPool(){ return &m_poolbuf; }

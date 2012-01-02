@@ -130,7 +130,7 @@ public:
 	virtual HRESULT CheckMediaType(const CMediaType *)PURE;
 
 protected:
-	//CCritSec *m_pLock;
+	
 };
 
 
@@ -200,8 +200,7 @@ protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
 	CCritSec m_csInPin;
-	CCritSec m_csVoutPin;
-	CCritSec m_csAoutPin;
+	CCritSec m_csOutPin;
 	CFeFFmpeg *m_pffmpeg;
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;

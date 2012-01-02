@@ -794,8 +794,8 @@ HRESULT CAudioOutPin::CheckMediaType(const CMediaType *pmt)
 CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
-	m_DataInputPin( this, &m_csInPin , phr ,&m_bufpool , m_pffmpeg ) ,
-	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(5,2),
+	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
+	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,2),
 	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
 	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )
 {
@@ -891,8 +891,8 @@ unsigned int CParseFilter::CheckAlmostThread( void *arg )
 
 int CParseFilter::NotifyStartSync()
 {
-	m_picpool.WaitAlmost();
-	m_audiopool.WaitAlmost();
+	//m_picpool.WaitAlmost();
+	//m_audiopool.WaitAlmost();
 	SetEvent( m_hSyncAlmost[0] );
 	SetEvent( m_hSyncAlmost[1] );
 	return 0;

@@ -182,7 +182,7 @@ LRESULT CMainDlg::OnPlay_Pause()
 	pBaseFilter->Release();
 
 	//m_pFilterGraph->FindFilterByName(  )
-	pFeFile->Play( L"mms://112.65.246.171/easysk/kaodian/2011/km_minfa/minfa_63" );
+	pFeFile->Play( L"mms://114.141.181.150/easysk/kaodian/2011/km_minfa/minfa_63" );
 
 	return 0L;
 }

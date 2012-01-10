@@ -10,7 +10,7 @@ class CBufPoolOper{
 class CFeBufPool : public CAsyncStream
 {
 public:
-	CFeBufPool( int units = 10 , long size = 32768 );
+	CFeBufPool( int units = 20 , long size = 32768 );
 	~CFeBufPool(void);
 	virtual HRESULT SetPointer(LONGLONG llPos);
 	virtual HRESULT Read(PBYTE pbBuffer, DWORD dwBytesToRead, BOOL bAlign, LPDWORD pdwBytesRead);

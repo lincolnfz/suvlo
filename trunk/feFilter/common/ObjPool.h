@@ -140,7 +140,7 @@ protected:
 		m_total = units * size;
 		m_cur = 0;
 		m_lessRange = units / 3;
-		m_topRange = units - m_lessRange;
+		m_topRange = units / 2;// units - m_lessRange;
 		m_hAlmost = CreateEvent( NULL , FALSE , FALSE , NULL );
 		m_hBare = CreateEvent( NULL , FALSE , FALSE , NULL );
 		return 0;
@@ -208,7 +208,7 @@ getnew:
 		//pNode->pData->Resetcursor();
 		ll = pNode->pData->GetPosition();
 		putDataLink( m_pFullList , pNode ); //数据写满,归还给完成队列
-		if ( m_pFullList->nb_size >= m_topRange )
+		if ( m_pFullList->nb_size >= 1/*m_topRange*/ )
 		{
 			SetEvent( m_hAlmost );
 		}

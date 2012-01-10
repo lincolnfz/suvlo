@@ -564,6 +564,12 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 	{
 		HANDLE *hevent = parserFilter->GetHandleArray();
 		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
+		IReferenceClock *pRefClock;
+		m_pFilter->GetSyncSource( &pRefClock );
+		REFERENCE_TIME rfRun;
+		pRefClock->GetTime( &rfRun );
+		m_rtSampleTime = rfRun - parserFilter->getRefTime();
+		DbgLog((LOG_TRACE, 0, TEXT("video m_rtSampleTime -----: %d\r"), m_rtSampleTime ));
 	}
 	++times;
 
@@ -590,6 +596,7 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 	// Increment to find the finish time
 	m_rtSampleTime += (REFERENCE_TIME)m_iRepeatTime;
 	pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+	//pSamp->SetTime( NULL , NULL );
 
 	pSamp->SetSyncPoint(TRUE);
 
@@ -627,6 +634,12 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	{
 		HANDLE *hevent = parserFilter->GetHandleArray();
 		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
+		IReferenceClock *pRefClock;
+		m_pFilter->GetSyncSource( &pRefClock );
+		REFERENCE_TIME rfRun;
+		pRefClock->GetTime( &rfRun );
+		m_rtSampleTime = rfRun - parserFilter->getRefTime();
+		DbgLog((LOG_TRACE, 0, TEXT("audio m_rtSampleTime -----: %d\r"), m_rtSampleTime ));
 	}
 	++times;
 	BYTE *pData;
@@ -645,6 +658,7 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	double dbsec = (double)pkt->samplesize / (double)m_pwavFmt->nAvgBytesPerSec ;
 	m_rtSampleTime = rtStart + dbsec * UNITS;
 	pSamp->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
+	//pSamp->SetTime( NULL , NULL );
 	pSamp->SetActualDataLength( pkt->samplesize );
 	pSamp->SetSyncPoint(TRUE);
 	
@@ -796,13 +810,13 @@ CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
 	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
 	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,2),
-	m_VideoOutPin( this, &m_csFilter , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
-	m_AudOutPin( this , &m_csFilter , phr , &m_audiopool , &m_waveFmt )
+	m_VideoOutPin( this, &m_csOutPin1 , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
+	m_AudOutPin( this , &m_csOutPin2 , phr , &m_audiopool , &m_waveFmt )
 {
 	InitPool( &m_bufpool , 10 , 131072 );
 	//m_pffmpeg = CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt);
-	m_hSyncAlmost[0] = CreateEvent( NULL , FALSE , FALSE , NULL );
-	m_hSyncAlmost[1] = CreateEvent( NULL , FALSE , FALSE , NULL );
+	m_hSyncAlmost[0] = CreateEvent( NULL , TRUE , FALSE , NULL );
+	m_hSyncAlmost[1] = CreateEvent( NULL , TRUE , FALSE , NULL );
 
 	//开始设置视频,音频的属性
 	m_videoinfo.bmiHeader.biWidth = DEFAULT_WIDTH;
@@ -843,6 +857,10 @@ STDMETHODIMP CParseFilter::Run(REFERENCE_TIME tStart)
 	HRESULT hr = CBaseFilter::Run( tStart );
 	_beginthreadex( NULL , 0 , CheckOutThread , this , 0 , 0 );
 	_beginthreadex( NULL , 0 , CheckAlmostThread , this , 0 , 0 );
+	IReferenceClock *pRefClock;
+	this->GetSyncSource( &pRefClock );
+	pRefClock->GetTime( &m_rtRun );
+
 	return hr;
 }
 
@@ -891,8 +909,8 @@ unsigned int CParseFilter::CheckAlmostThread( void *arg )
 
 int CParseFilter::NotifyStartSync()
 {
-	//m_picpool.WaitAlmost();
-	//m_audiopool.WaitAlmost();
+	m_picpool.WaitAlmost();
+	m_audiopool.WaitAlmost();
 	SetEvent( m_hSyncAlmost[0] );
 	SetEvent( m_hSyncAlmost[1] );
 	return 0;

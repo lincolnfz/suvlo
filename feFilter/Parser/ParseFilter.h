@@ -200,7 +200,8 @@ protected:
 	// filter-wide lock
 	CCritSec m_csFilter;
 	CCritSec m_csInPin;
-	CCritSec m_csOutPin;
+	CCritSec m_csOutPin1;
+	CCritSec m_csOutPin2;
 	CFeFFmpeg *m_pffmpeg;
 	VIDEOINFO m_videoinfo;
 	GUID m_videoDstFmt;
@@ -214,6 +215,7 @@ protected:
 	CObjPool<AVPicture> m_picpool;
 	CObjPool<AUDIO_PACK> m_audiopool;
 	HANDLE m_hSyncAlmost[2];
+	REFERENCE_TIME m_rtRun;
 	
 	//CObjPool<>
 public:
@@ -223,6 +225,7 @@ public:
 	static CUnknown * WINAPI CreateInstance(LPUNKNOWN, HRESULT *);
 	static unsigned int __stdcall CheckOutThread( void *arg );
 	int ProcOutConnect();
+	REFERENCE_TIME getRefTime(){ return m_rtRun; }
 
 	static unsigned int __stdcall CheckAlmostThread( void *arg );
 	int NotifyStartSync();

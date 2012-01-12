@@ -564,11 +564,12 @@ HRESULT CVideoOutPin::FillBuffer(IMediaSample *pSamp)
 	{
 		HANDLE *hevent = parserFilter->GetHandleArray();
 		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
-		IReferenceClock *pRefClock;
+		/*IReferenceClock *pRefClock;
 		m_pFilter->GetSyncSource( &pRefClock );
 		REFERENCE_TIME rfRun;
 		pRefClock->GetTime( &rfRun );
-		m_rtSampleTime = rfRun - parserFilter->getRefTime();
+		m_rtSampleTime = rfRun - parserFilter->getRefTime();*/
+		m_rtSampleTime = parserFilter->getSampleTime();
 		DbgLog((LOG_TRACE, 0, TEXT("video m_rtSampleTime -----: %d\r"), m_rtSampleTime ));
 	}
 	++times;
@@ -634,11 +635,12 @@ HRESULT CAudioOutPin::FillBuffer(IMediaSample *pSamp)
 	{
 		HANDLE *hevent = parserFilter->GetHandleArray();
 		WaitForMultipleObjects( 2 , hevent , TRUE , INFINITE );
-		IReferenceClock *pRefClock;
+		/*IReferenceClock *pRefClock;
 		m_pFilter->GetSyncSource( &pRefClock );
 		REFERENCE_TIME rfRun;
 		pRefClock->GetTime( &rfRun );
-		m_rtSampleTime = rfRun - parserFilter->getRefTime();
+		m_rtSampleTime = rfRun - parserFilter->getRefTime();*/
+		m_rtSampleTime = parserFilter->getSampleTime();
 		DbgLog((LOG_TRACE, 0, TEXT("audio m_rtSampleTime -----: %d\r"), m_rtSampleTime ));
 	}
 	++times;
@@ -809,7 +811,7 @@ CParseFilter::CParseFilter(LPUNKNOWN pUnk, HRESULT *phr)
 	:CBaseFilter( NAME("parse filter") , pUnk , &m_csFilter , CLSID_Parser , phr ),
 	m_pffmpeg(CFeFFmpeg::GetInstance( &m_bufpool , &m_picpool , &m_audiopool , &m_videoinfo , &m_waveFmt , &m_videoDstFmt , this)),
 	m_DataInputPin( this, &m_csFilter , phr ,&m_bufpool , m_pffmpeg ) ,
-	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,2),
+	m_picpool(UNITQUEUE,UNITSIZE),m_audiopool(UNITQUEUE,UNITSIZE),
 	m_VideoOutPin( this, &m_csOutPin1 , phr , &m_picpool , &m_videoinfo , &m_videoDstFmt ), //video out pin
 	m_AudOutPin( this , &m_csOutPin2 , phr , &m_audiopool , &m_waveFmt )
 {
@@ -910,7 +912,12 @@ unsigned int CParseFilter::CheckAlmostThread( void *arg )
 int CParseFilter::NotifyStartSync()
 {
 	m_picpool.WaitAlmost();
-	m_audiopool.WaitAlmost();
+	//m_audiopool.WaitAlmost();
+	IReferenceClock *pRefClock;
+	GetSyncSource( &pRefClock );
+	REFERENCE_TIME rfRun;
+	pRefClock->GetTime( &rfRun );
+	m_rtSampleTime = rfRun - m_rtRun;
 	SetEvent( m_hSyncAlmost[0] );
 	SetEvent( m_hSyncAlmost[1] );
 	return 0;

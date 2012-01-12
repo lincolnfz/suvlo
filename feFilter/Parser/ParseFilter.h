@@ -216,6 +216,7 @@ protected:
 	CObjPool<AUDIO_PACK> m_audiopool;
 	HANDLE m_hSyncAlmost[2];
 	REFERENCE_TIME m_rtRun;
+	REFERENCE_TIME m_rtSampleTime;
 	
 	//CObjPool<>
 public:
@@ -226,6 +227,7 @@ public:
 	static unsigned int __stdcall CheckOutThread( void *arg );
 	int ProcOutConnect();
 	REFERENCE_TIME getRefTime(){ return m_rtRun; }
+	REFERENCE_TIME getSampleTime(){ return m_rtSampleTime; }
 
 	static unsigned int __stdcall CheckAlmostThread( void *arg );
 	int NotifyStartSync();

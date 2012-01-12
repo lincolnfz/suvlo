@@ -13,8 +13,8 @@
 #pragma comment( lib , "../../lib/avutil.lib" )
 #pragma comment( lib , "../../lib/swscale.lib" )
 
-const int UNITQUEUE = 10;
-const long UNITSIZE = 5;
+const int UNITQUEUE = 15;
+const long UNITSIZE = 12;
 
 CFeFFmpeg *g_pFeFFmpeg = NULL;
 CFeFFmpeg* CFeFFmpeg::m_pFeFFmpeg = NULL;
